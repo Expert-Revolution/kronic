@@ -91,3 +91,35 @@ tolerations: []
 
 # -- Provide scheduling affinity selectors
 affinity: {}
+
+networkPolicy:
+  # -- Enable NetworkPolicy for Kronic pods
+  enabled: false
+  # -- Additional labels to match on ingress
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # -- Allow ingress from pods with these labels (default: all pods in all namespaces)
+    from: []
+    # Example: Only allow ingress from pods with specific labels
+    # from:
+    #   - podSelector:
+    #       matchLabels:
+    #         app: ingress-nginx
+    #   - namespaceSelector:
+    #       matchLabels:
+    #         name: ingress-system
+  egress:
+    # -- Allow egress to specific destinations (default: Kubernetes API server and DNS)
+    to:
+      # Allow egress to Kubernetes API server
+      - {}
+    # -- Ports to allow for egress (default: HTTPS/443 for API server, DNS/53)
+    ports:
+      - protocol: TCP
+        port: 443
+      - protocol: UDP  
+        port: 53
+      - protocol: TCP
+        port: 53
