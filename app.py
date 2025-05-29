@@ -106,15 +106,23 @@ def view_namespace(namespace):
         cronjob_detail = get_cronjob(namespace, cronjob["name"])
         jobs = get_jobs(namespace=namespace, cronjob_name=cronjob["name"])
         for job in jobs:
-            job["pods"] = [pod for pod in all_pods if pod_is_owned_by(pod, job["metadata"]["name"])]
+            job["pods"] = [
+                pod for pod in all_pods if pod_is_owned_by(pod, job["metadata"]["name"])
+            ]
         cronjob_detail["jobs"] = jobs
-        
+
         # Add interpreted schedule
-        if cronjob_detail and "spec" in cronjob_detail and "schedule" in cronjob_detail["spec"]:
-            cronjob_detail["interpreted_schedule"] = _interpret_cron_schedule(cronjob_detail["spec"]["schedule"])
+        if (
+            cronjob_detail
+            and "spec" in cronjob_detail
+            and "schedule" in cronjob_detail["spec"]
+        ):
+            cronjob_detail["interpreted_schedule"] = _interpret_cron_schedule(
+                cronjob_detail["spec"]["schedule"]
+            )
         else:
             cronjob_detail["interpreted_schedule"] = "Unknown schedule"
-            
+
         cronjobs_with_details.append(cronjob_detail)
 
     return render_template(
