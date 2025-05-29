@@ -116,8 +116,19 @@ def _validate_cronjob_yaml(yaml_content):
     if not isinstance(spec, dict):
         return False, None, "spec must be a dictionary"
 
-    if not spec.get("schedule"):
+    schedule = spec.get("schedule")
+    if not schedule:
         return False, None, "spec.schedule is required"
+
+    # Basic cron schedule validation (should have 5 fields)
+    if isinstance(schedule, str):
+        schedule_parts = schedule.strip().split()
+        if len(schedule_parts) != 5:
+            return (
+                False,
+                None,
+                f"spec.schedule '{schedule}' is invalid. Cron schedule must have exactly 5 fields (minute hour day-of-month month day-of-week)",
+            )
 
     if not spec.get("jobTemplate"):
         return False, None, "spec.jobTemplate is required"

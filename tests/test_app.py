@@ -199,3 +199,47 @@ def test_validate_cronjob_yaml_empty():
     is_valid, parsed, error = _validate_cronjob_yaml(yaml_content)
     assert is_valid == False
     assert "YAML must be a dictionary/object" in error
+
+
+def test_validate_cronjob_yaml_invalid_cron_schedule():
+    """Test validation with invalid cron schedule"""
+    yaml_content = """
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-cronjob
+spec:
+  schedule: "invalid cron"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: test
+            image: busybox
+"""
+    is_valid, parsed, error = _validate_cronjob_yaml(yaml_content)
+    assert is_valid == False
+    assert "Cron schedule must have exactly 5 fields" in error
+
+
+def test_validate_cronjob_yaml_valid_cron_schedule():
+    """Test validation with valid cron schedule"""
+    yaml_content = """
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-cronjob
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: test
+            image: busybox
+"""
+    is_valid, parsed, error = _validate_cronjob_yaml(yaml_content)
+    assert is_valid == True
+    assert error is None
