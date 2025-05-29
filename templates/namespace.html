@@ -135,10 +135,20 @@
       getLogs(namespace, podname) {
         this.isLoading = true;
         fetch(`/api/namespaces/${namespace}/pods/${podname}/logs`)
-          .then(res => res.text())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.text();
+          })
           .then(data => {
             this.isLoading = false;
             this.logs = data;
+          })
+          .catch(err => {
+            this.isLoading = false;
+            this.logs = `Error loading logs: ${err.message}`;
+            console.error('Failed to fetch logs:', err);
           })
       }
     }
@@ -152,7 +162,12 @@
           body: data,
           headers: { 'Content-Type': 'application/json' }
         })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response.json();
+        })
         .then(result => {
           if (refresh) {
             location.reload();
@@ -160,7 +175,9 @@
           return result;
         })
         .catch(err => {
-          alert(`Something went wrong: ${err}`);
+          console.error('API request failed:', err);
+          alert(`Something went wrong: ${err.message}`);
+          throw err;
         })
 
     )

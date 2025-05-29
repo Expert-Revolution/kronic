@@ -131,7 +131,7 @@ Kronic is a small Flask app built with:
 - [ ] Timeline / Cron schedule interpreter or display
 - [ ] YAML/Spec Validation on Edit page
 - [ ] Async refreshing of job/pods
-- [ ] Error handling for js apiClient
+- [x] Error handling for js apiClient
 - [ ] Better logging from Flask app and Kron module
 - [ ] Improve test coverage
 - [ ] Integration tests against ephemeral k3s cluster
