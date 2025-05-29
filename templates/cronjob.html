@@ -2,6 +2,14 @@
 {% block content %}
 <a href="/namespaces/{{cronjob.metadata.namespace}}">«back to {{cronjob.metadata.namespace}}</a>
 <h2>{% block title %}Editing {{cronjob.metadata.name}} in {{cronjob.metadata.namespace}}{% endblock %}</h2>
+
+{% if validation_error %}
+<article style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 16px; margin-bottom: 16px;">
+  <h4 style="color: #d32f2f; margin-top: 0;">Validation Error</h4>
+  <p style="color: #d32f2f; margin-bottom: 0;">{{ validation_error }}</p>
+</article>
+{% endif %}
+
 <form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
   <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
   <label for="yaml">Cronjob YAML:</label>
