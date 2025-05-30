@@ -10,41 +10,81 @@
     >Create CronJob</div></div>
 </div>
 {% for cronjob in cronjobs %}
-<div x-cloak x-data="{jobs: [], isLoading: true, failing: false, cloneJobName: null, wrapLogs: false}" x-init="async () => {
-  const response = apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'getJobs')
-    .then( jobsArray => {
-      jobs = jobsArray;
-      isLoading = false;
-      for (let job in jobsArray) {
-        if (jobsArray[job].status.failed) {
-          failing = true;
+<div x-cloak x-data="{
+    jobs: [], 
+    isLoading: true, 
+    failing: false, 
+    cloneJobName: null, 
+    wrapLogs: false, 
+    isRefreshing: false, 
+    autoRefresh: true, 
+    refreshInterval: 30000,
+    loadJobs: async function() {
+      this.isRefreshing = true;
+      try {
+        const jobsArray = await apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'getJobs');
+        this.jobs = jobsArray;
+        this.failing = false;
+        for (let job in jobsArray) {
+          if (jobsArray[job].status.failed) {
+            this.failing = true;
+          }
         }
+      } catch (error) {
+        console.error('Failed to load jobs:', error);
       }
-    })
-    .catch(err => {
-      isLoading = false;
-      console.error('Failed to load jobs:', err);
+      this.isLoading = false;
+      this.isRefreshing = false;
+    }
+  }" 
+  x-init="async () => {
+    // Initial load
+    await loadJobs();
+    
+    // Set up auto-refresh
+    const refreshTimer = setInterval(() => {
+      if (autoRefresh) {
+        loadJobs();
+      }
+    }, refreshInterval);
+    
+    // Cleanup on component destroy
+    $el.addEventListener('destroy', () => {
+      clearInterval(refreshTimer);
     });
   };
   ">
   <article>
     <table>
       <tr>
-        <th><strong>{{ cronjob.metadata.name }}</strong></th>
+        <th>
+          <strong>{{ cronjob.metadata.name }}</strong>
+          <div style="font-size: 0.7em; font-weight: normal; margin-top: 5px;">
+            <label style="display: inline-flex; align-items: center;">
+              <input type="checkbox" x-model="autoRefresh" style="margin-right: 3px; scale: 0.8;">
+              Auto-refresh (30s)
+            </label>
+            <button class="outline" style="font-size: 0.8em; padding: 2px 6px; margin-left: 5px;" 
+                    @click="loadJobs()" :disabled="isRefreshing">
+              <span x-show="!isRefreshing">↻</span>
+              <span x-show="isRefreshing">⋯</span>
+            </button>
+          </div>
+        </th>
         <th><strong x-show="failing" style="color:red">Failures!</strong></th>
         <th>
           <div x-data="{ suspended: {{cronjob.spec.suspend | lower }} }">
             <label>
               Suspend
               <input type="checkbox" role="switch"
-                @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'suspend', 'POST', '')"
+                @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'suspend', 'POST', '').catch(err => console.error('Suspend failed:', err))"
                 x-model="suspended" />
             </label>
           </div>
         </th>
         <th>
           <div role="button"
-            @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'trigger', 'POST', '', true)">
+            @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'trigger', 'POST', '', true).catch(err => console.error('Trigger failed:', err))">
             Trigger
           </div>
         </th>
@@ -68,14 +108,17 @@
         </th>
         <th>
           <div role="button"
-            @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'delete', 'POST', '', true) : false;">
+            @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'delete', 'POST', '', true).catch(err => console.error('Delete failed:', err)) : false;">
             Delete
           </div>
         </th>
       </tr>
     </table>
     <p>
-      Schedule: <code>{{ cronjob.spec.schedule }}</code><br />
+      Schedule: <code>{{ cronjob.spec.schedule }}</code> <em>({{ cronjob.interpreted_schedule }})</em><br />
+      {% if cronjob.spec.timeZone %}
+        Timezone: <code>{{ cronjob.spec.timeZone }}</code><br />
+      {% endif %}
       Last Scheduled: <code>{{ cronjob.status.lastScheduleTime }}</code><br />
       {% if cronjob.status.lastSuccessfulTime %}
         Last Successful Run: <code>{{ cronjob.status.lastSuccessfulTime }}</code><br /></p>
@@ -99,7 +142,7 @@
               <small x-text="'Age: ' + job.status.age"></small>
               <span x-show="job.status.failed" style="color:red">Failed!</span>
               <a href="#{{cronjob.metadata.name}}-detail"
-                @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'jobs', job.metadata.name, 'delete', 'POST', '', true) : false;">
+                @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'jobs', job.metadata.name, 'delete', 'POST', '', true).catch(err => console.error('Job delete failed:', err)) : false;">
                 [delete]</a>
             </li>
             <ul>

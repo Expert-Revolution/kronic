@@ -119,6 +119,119 @@ def _has_label(api_object: object, k: str, v: str) -> bool:
     return labels.get(k) == v
 
 
+def _interpret_cron_schedule(cron_expression: str) -> str:
+    """
+    Convert a cron expression to human-readable text.
+
+    Args:
+        cron_expression (str): A cron expression (e.g., "*/10 * * * *")
+
+    Returns:
+        str: Human-readable description of the schedule
+    """
+    if not cron_expression or not isinstance(cron_expression, str):
+        return "Invalid schedule"
+
+    parts = cron_expression.strip().split()
+    if len(parts) != 5:
+        return "Invalid cron format"
+
+    minute, hour, day, month, weekday = parts
+
+    # Handle common patterns
+    if cron_expression == "* * * * *":
+        return "Every minute"
+
+    if (
+        minute.startswith("*/")
+        and hour == "*"
+        and day == "*"
+        and month == "*"
+        and weekday == "*"
+    ):
+        interval = minute[2:]
+        if interval == "1":
+            return "Every minute"
+        else:
+            return f"Every {interval} minutes"
+
+    if (
+        minute == "0"
+        and hour.startswith("*/")
+        and day == "*"
+        and month == "*"
+        and weekday == "*"
+    ):
+        interval = hour[2:]
+        if interval == "1":
+            return "Every hour"
+        else:
+            return f"Every {interval} hours"
+
+    if minute == "0" and hour == "0" and day == "*" and month == "*" and weekday == "*":
+        return "Daily at midnight"
+
+    if minute == "0" and hour == "0" and day == "*" and month == "*" and weekday == "0":
+        return "Weekly on Sunday at midnight"
+
+    if minute == "0" and hour == "0" and day == "1" and month == "*" and weekday == "*":
+        return "Monthly on the 1st at midnight"
+
+    # Handle specific times
+    if (
+        hour.isdigit()
+        and minute.isdigit()
+        and day == "*"
+        and month == "*"
+        and weekday == "*"
+    ):
+        hour_int = int(hour)
+        minute_int = int(minute)
+        time_str = f"{hour_int:02d}:{minute_int:02d}"
+        return f"Daily at {time_str}"
+
+    # Handle specific weekdays
+    if (
+        minute.isdigit()
+        and hour.isdigit()
+        and day == "*"
+        and month == "*"
+        and weekday.isdigit()
+    ):
+        hour_int = int(hour)
+        minute_int = int(minute)
+        weekday_int = int(weekday)
+        weekdays = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+        ]
+        if 0 <= weekday_int <= 6:
+            time_str = f"{hour_int:02d}:{minute_int:02d}"
+            return f"Weekly on {weekdays[weekday_int]} at {time_str}"
+
+    # Handle monthly schedules
+    if (
+        minute.isdigit()
+        and hour.isdigit()
+        and day.isdigit()
+        and month == "*"
+        and weekday == "*"
+    ):
+        hour_int = int(hour)
+        minute_int = int(minute)
+        day_int = int(day)
+        time_str = f"{hour_int:02d}:{minute_int:02d}"
+        return f"Monthly on the {day_int} at {time_str}"
+
+    # Fallback for complex expressions
+    return f"Custom schedule: {cron_expression}"
+
+
 def pod_is_owned_by(api_dict: dict, owner_name: str) -> bool:
     """Return whether a job or pod contains an ownerReference to the given cronjob or job name
 
@@ -261,7 +374,9 @@ def get_pods(namespace: str, job_name: str = None) -> List[dict]:
         all_pods = v1.list_namespaced_pod(namespace=namespace)
         cleaned_pods = [_clean_api_object(pod) for pod in all_pods.items]
         filtered_pods = [
-            pod for pod in cleaned_pods if pod_is_owned_by(pod, job_name) or (not job_name)
+            pod
+            for pod in cleaned_pods
+            if pod_is_owned_by(pod, job_name) or (not job_name)
         ]
 
         for pod in filtered_pods:
@@ -296,7 +411,9 @@ def get_jobs_and_pods(namespace: str, cronjob_name: str) -> List[dict]:
     jobs = get_jobs(namespace, cronjob_name)
     all_pods = get_pods(namespace)
     for job in jobs:
-        job["pods"] = [pod for pod in all_pods if pod_is_owned_by(pod, job["metadata"]["name"])]
+        job["pods"] = [
+            pod for pod in all_pods if pod_is_owned_by(pod, job["metadata"]["name"])
+        ]
 
     return jobs
 
