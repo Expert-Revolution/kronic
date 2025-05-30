@@ -10,23 +10,67 @@
     >Create CronJob</div></div>
 </div>
 {% for cronjob in cronjobs %}
-<div x-cloak x-data="{jobs: [], isLoading: true, failing: false, cloneJobName: null, wrapLogs: false}" x-init="async () => {
-  const response = apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'getJobs')
-    .then( jobsArray => {
-      jobs = jobsArray;
-      isLoading = false;
-      for (let job in jobsArray) {
-        if (jobsArray[job].status.failed) {
-          failing = true;
+<div x-cloak x-data="{
+    jobs: [], 
+    isLoading: true, 
+    failing: false, 
+    cloneJobName: null, 
+    wrapLogs: false, 
+    isRefreshing: false, 
+    autoRefresh: true, 
+    refreshInterval: 30000,
+    loadJobs: async function() {
+      this.isRefreshing = true;
+      try {
+        const jobsArray = await apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'getJobs');
+        this.jobs = jobsArray;
+        this.failing = false;
+        for (let job in jobsArray) {
+          if (jobsArray[job].status.failed) {
+            this.failing = true;
+          }
         }
+      } catch (error) {
+        console.error('Failed to load jobs:', error);
       }
+      this.isLoading = false;
+      this.isRefreshing = false;
+    }
+  }" 
+  x-init="async () => {
+    // Initial load
+    await loadJobs();
+    
+    // Set up auto-refresh
+    const refreshTimer = setInterval(() => {
+      if (autoRefresh) {
+        loadJobs();
+      }
+    }, refreshInterval);
+    
+    // Cleanup on component destroy
+    $el.addEventListener('destroy', () => {
+      clearInterval(refreshTimer);
     });
   };
   ">
   <article>
     <table>
       <tr>
-        <th><strong>{{ cronjob.metadata.name }}</strong></th>
+        <th>
+          <strong>{{ cronjob.metadata.name }}</strong>
+          <div style="font-size: 0.7em; font-weight: normal; margin-top: 5px;">
+            <label style="display: inline-flex; align-items: center;">
+              <input type="checkbox" x-model="autoRefresh" style="margin-right: 3px; scale: 0.8;">
+              Auto-refresh (30s)
+            </label>
+            <button class="outline" style="font-size: 0.8em; padding: 2px 6px; margin-left: 5px;" 
+                    @click="loadJobs()" :disabled="isRefreshing">
+              <span x-show="!isRefreshing">↻</span>
+              <span x-show="isRefreshing">⋯</span>
+            </button>
+          </div>
+        </th>
         <th><strong x-show="failing" style="color:red">Failures!</strong></th>
         <th>
           <div x-data="{ suspended: {{cronjob.spec.suspend | lower }} }">
