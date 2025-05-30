@@ -7,15 +7,14 @@ from werkzeug.security import generate_password_hash
 # Configure logging
 LOG_LEVEL = os.environ.get("KRONIC_LOG_LEVEL", "INFO").upper()
 LOG_FORMAT = os.environ.get(
-    "KRONIC_LOG_FORMAT", 
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    "KRONIC_LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Setup root logger configuration
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
     format=LOG_FORMAT,
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 
 log = logging.getLogger("app.config")

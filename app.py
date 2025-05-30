@@ -58,10 +58,14 @@ def namespace_filter(func):
                 log.debug(f"Access granted to namespace '{namespace}'")
                 return func(namespace, *args, **kwargs)
         else:
-            log.debug(f"Access granted to namespace '{namespace}' (no namespace restrictions)")
+            log.debug(
+                f"Access granted to namespace '{namespace}' (no namespace restrictions)"
+            )
             return func(namespace, *args, **kwargs)
 
-        log.warning(f"Access denied to namespace '{namespace}' due to KRONIC_ALLOW_NAMESPACES setting")
+        log.warning(
+            f"Access denied to namespace '{namespace}' due to KRONIC_ALLOW_NAMESPACES setting"
+        )
         data = {
             "error": f"Request to {namespace} denied due to KRONIC_ALLOW_NAMESPACES setting",
             "namespace": namespace,
@@ -428,9 +432,13 @@ def api_clone_cronjob(namespace, cronjob_name):
     print(cronjob_spec)
     cronjob = update_cronjob(namespace, cronjob_spec)
     if "error" in cronjob:
-        log.error(f"Failed to clone cronjob '{cronjob_name}' to '{new_name}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+        log.error(
+            f"Failed to clone cronjob '{cronjob_name}' to '{new_name}': {cronjob.get('exception', {}).get('message', 'Unknown error')}"
+        )
     else:
-        log.info(f"Successfully cloned cronjob '{cronjob_name}' to '{new_name}' in namespace '{namespace}'")
+        log.info(
+            f"Successfully cloned cronjob '{cronjob_name}' to '{new_name}' in namespace '{namespace}'"
+        )
     return cronjob
 
 
@@ -444,9 +452,13 @@ def api_create_cronjob(namespace):
     log.debug(f"Creating cronjob '{cronjob_name}' in namespace '{namespace}'")
     cronjob = update_cronjob(namespace, cronjob_spec)
     if "error" in cronjob:
-        log.error(f"Failed to create cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+        log.error(
+            f"Failed to create cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}"
+        )
     else:
-        log.info(f"Successfully created cronjob '{cronjob_name}' in namespace '{namespace}'")
+        log.info(
+            f"Successfully created cronjob '{cronjob_name}' in namespace '{namespace}'"
+        )
     return cronjob
 
 
@@ -459,9 +471,13 @@ def api_delete_cronjob(namespace, cronjob_name):
     log.info(f"Deleting cronjob '{cronjob_name}' in namespace '{namespace}'")
     deleted = delete_cronjob(namespace, cronjob_name)
     if "error" in deleted:
-        log.error(f"Failed to delete cronjob '{cronjob_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}")
+        log.error(
+            f"Failed to delete cronjob '{cronjob_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}"
+        )
     else:
-        log.info(f"Successfully deleted cronjob '{cronjob_name}' in namespace '{namespace}'")
+        log.info(
+            f"Successfully deleted cronjob '{cronjob_name}' in namespace '{namespace}'"
+        )
     return deleted
 
 
@@ -474,18 +490,26 @@ def api_delete_cronjob(namespace, cronjob_name):
 def api_toggle_cronjob_suspend(namespace, cronjob_name):
     if request.method == "GET":
         """Return the suspended status of the <cronjob_name>"""
-        log.debug(f"Getting suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'")
+        log.debug(
+            f"Getting suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'"
+        )
         cronjob = get_cronjob(namespace, cronjob_name)
         return cronjob
     if request.method == "POST":
         """Toggle the suspended status of <cronjob_name>"""
-        log.info(f"Toggling suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'")
+        log.info(
+            f"Toggling suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'"
+        )
         cronjob = toggle_cronjob_suspend(namespace, cronjob_name)
         if "error" in cronjob:
-            log.error(f"Failed to toggle suspend for cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+            log.error(
+                f"Failed to toggle suspend for cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}"
+            )
         else:
             suspend_status = cronjob.get("spec", {}).get("suspend", False)
-            log.info(f"Successfully {'suspended' if suspend_status else 'resumed'} cronjob '{cronjob_name}' in namespace '{namespace}'")
+            log.info(
+                f"Successfully {'suspended' if suspend_status else 'resumed'} cronjob '{cronjob_name}' in namespace '{namespace}'"
+            )
         return cronjob
 
 
@@ -501,9 +525,13 @@ def api_trigger_cronjob(namespace, cronjob_name):
     status = 200
     if "error" in cronjob:
         status = cronjob["error"]
-        log.error(f"Failed to trigger cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+        log.error(
+            f"Failed to trigger cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}"
+        )
     else:
-        log.info(f"Successfully triggered cronjob '{cronjob_name}' in namespace '{namespace}'")
+        log.info(
+            f"Successfully triggered cronjob '{cronjob_name}' in namespace '{namespace}'"
+        )
 
     return cronjob, status
 
@@ -539,7 +567,9 @@ def api_delete_job(namespace, job_name):
     log.info(f"Deleting job '{job_name}' in namespace '{namespace}'")
     deleted = delete_job(namespace, job_name)
     if "error" in deleted:
-        log.error(f"Failed to delete job '{job_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}")
+        log.error(
+            f"Failed to delete job '{job_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}"
+        )
     else:
         log.info(f"Successfully deleted job '{job_name}' in namespace '{namespace}'")
     return deleted
