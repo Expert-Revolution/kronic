@@ -77,14 +77,14 @@
             <label>
               Suspend
               <input type="checkbox" role="switch"
-                @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'suspend', 'POST', '')"
+                @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'suspend', 'POST', '').catch(err => console.error('Suspend failed:', err))"
                 x-model="suspended" />
             </label>
           </div>
         </th>
         <th>
           <div role="button"
-            @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'trigger', 'POST', '', true)">
+            @click="apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'trigger', 'POST', '', true).catch(err => console.error('Trigger failed:', err))">
             Trigger
           </div>
         </th>
@@ -99,13 +99,16 @@
               apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'clone', 'POST', data, false)
               .then(response => {
                 window.location.href = `/namespaces/{{namespace}}/cronjobs/${cloneJobName}`;
+              })
+              .catch(err => {
+                console.error('Clone failed:', err);
               });">
             Clone
           </div>
         </th>
         <th>
           <div role="button"
-            @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'delete', 'POST', '', true) : false;">
+            @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'delete', 'POST', '', true).catch(err => console.error('Delete failed:', err)) : false;">
             Delete
           </div>
         </th>
@@ -139,7 +142,7 @@
               <small x-text="'Age: ' + job.status.age"></small>
               <span x-show="job.status.failed" style="color:red">Failed!</span>
               <a href="#{{cronjob.metadata.name}}-detail"
-                @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'jobs', job.metadata.name, 'delete', 'POST', '', true) : false;">
+                @click="confirm('Are you sure?') ? apiClient('{{namespace}}', 'jobs', job.metadata.name, 'delete', 'POST', '', true).catch(err => console.error('Job delete failed:', err)) : false;">
                 [delete]</a>
             </li>
             <ul>
@@ -182,10 +185,19 @@
       getLogs(namespace, podname) {
         this.isLoading = true;
         fetch(`/api/namespaces/${namespace}/pods/${podname}/logs`)
-          .then(res => res.text())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.text();
+          })
           .then(data => {
             this.isLoading = false;
             this.logs = data;
+          })
+          .catch(err => {
+            this.isLoading = false;
+            this.logs = `Error fetching logs: ${err.message}`;
           })
       }
     }
@@ -199,7 +211,28 @@
           body: data,
           headers: { 'Content-Type': 'application/json' }
         })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            // Try to parse error response as JSON, fallback to status text
+            return response.text().then(text => {
+              let errorMessage;
+              try {
+                const errorData = JSON.parse(text);
+                if (errorData.exception && errorData.exception.message) {
+                  errorMessage = errorData.exception.message;
+                } else if (errorData.error) {
+                  errorMessage = errorData.error;
+                } else {
+                  errorMessage = text || response.statusText;
+                }
+              } catch (e) {
+                errorMessage = text || response.statusText;
+              }
+              throw new Error(`HTTP ${response.status}: ${errorMessage}`);
+            });
+          }
+          return response.json();
+        })
         .then(result => {
           if (refresh) {
             location.reload();
@@ -207,7 +240,8 @@
           return result;
         })
         .catch(err => {
-          alert(`Something went wrong: ${err}`);
+          alert(`API Error: ${err.message}`);
+          throw err; // Re-throw so callers can handle if needed
         })
 
     )
