@@ -178,6 +178,7 @@ def test_interpret_cron_schedule_complex():
     result = kron._interpret_cron_schedule("15,45 */6 * * 1-5")
     assert result == "Custom schedule: 15,45 */6 * * 1-5"
 
+
 def test_clean_api_object_preserves_timezone():
     """Test that timezone field is properly preserved when cleaning API objects"""
     from kubernetes import client
@@ -228,4 +229,3 @@ def test_clean_api_object_handles_missing_timezone():
     # Verify timezone field is either None or not present
     timezone_value = cleaned["spec"].get("timeZone")
     assert timezone_value is None or "timeZone" not in cleaned["spec"]
-
