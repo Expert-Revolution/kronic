@@ -47,6 +47,19 @@ and Pods in its own namespace. Enabling this setting in the helm chart values
 (`env.KRONIC_NAMESPACE_ONLY="true"`) will prevent creation of ClusterRole and
 ClusterRolebinding, creating only a namespaced Role and RoleBinding.
 
+### Network Policy
+
+The helm chart provides a NetworkPolicy resource that can be enabled to control traffic to the Kronic pods. 
+By default, the NetworkPolicy is disabled. It can be enabled by setting `networkPolicy.enabled=true` in your values file:
+
+```yaml
+networkPolicy:
+  enabled: true                  # Enable NetworkPolicy
+  namespaceSelector: {}          # Configure namespaceSelector for ingress
+  podSelector: {}                # Configure podSelector for ingress
+  additionalIngress: []          # Additional ingress rules
+```
+
 ### Authentication
 
 Kronic supports HTTP Basic authentication to the backend. It is enabled by default when installed via the helm chart. If no password is specified, the default username is `kronic` and the password is generated randomly.
@@ -191,7 +204,7 @@ Integration tests are automatically skipped if the required tools are not availa
 - [x] Built-in auth option
 - [x] Integration tests against ephemeral Kubernetes cluster
 - [ ] Display elements and handling for `spec.timezone`
-- [ ] NetworkPolicy in helm chart
+- [x] NetworkPolicy in helm chart
 - [ ] Timeline / Cron schedule interpreter or display
 - [ ] YAML/Spec Validation on Edit page
 - [ ] Async refreshing of job/pods
