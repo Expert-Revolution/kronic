@@ -109,6 +109,75 @@ def test_namespace_filter_allows_access(namespace: str = "test"):
     assert result is True
 
 
+def test_interpret_cron_schedule_every_minute():
+    result = kron._interpret_cron_schedule("* * * * *")
+    assert result == "Every minute"
+
+
+def test_interpret_cron_schedule_every_10_minutes():
+    result = kron._interpret_cron_schedule("*/10 * * * *")
+    assert result == "Every 10 minutes"
+
+
+def test_interpret_cron_schedule_every_hour():
+    result = kron._interpret_cron_schedule("0 */1 * * *")
+    assert result == "Every hour"
+
+
+def test_interpret_cron_schedule_every_2_hours():
+    result = kron._interpret_cron_schedule("0 */2 * * *")
+    assert result == "Every 2 hours"
+
+
+def test_interpret_cron_schedule_daily_midnight():
+    result = kron._interpret_cron_schedule("0 0 * * *")
+    assert result == "Daily at midnight"
+
+
+def test_interpret_cron_schedule_daily_specific_time():
+    result = kron._interpret_cron_schedule("30 14 * * *")
+    assert result == "Daily at 14:30"
+
+
+def test_interpret_cron_schedule_weekly():
+    result = kron._interpret_cron_schedule("0 0 * * 0")
+    assert result == "Weekly on Sunday at midnight"
+
+
+def test_interpret_cron_schedule_weekly_specific_time():
+    result = kron._interpret_cron_schedule("15 9 * * 1")
+    assert result == "Weekly on Monday at 09:15"
+
+
+def test_interpret_cron_schedule_monthly():
+    result = kron._interpret_cron_schedule("0 0 1 * *")
+    assert result == "Monthly on the 1st at midnight"
+
+
+def test_interpret_cron_schedule_monthly_specific():
+    result = kron._interpret_cron_schedule("30 12 15 * *")
+    assert result == "Monthly on the 15 at 12:30"
+
+
+def test_interpret_cron_schedule_invalid_format():
+    result = kron._interpret_cron_schedule("invalid")
+    assert result == "Invalid cron format"
+
+
+def test_interpret_cron_schedule_empty():
+    result = kron._interpret_cron_schedule("")
+    assert result == "Invalid schedule"
+
+
+def test_interpret_cron_schedule_none():
+    result = kron._interpret_cron_schedule(None)
+    assert result == "Invalid schedule"
+
+
+def test_interpret_cron_schedule_complex():
+    result = kron._interpret_cron_schedule("15,45 */6 * * 1-5")
+    assert result == "Custom schedule: 15,45 */6 * * 1-5"
+
 def test_clean_api_object_preserves_timezone():
     """Test that timezone field is properly preserved when cleaning API objects"""
     from kubernetes import client
@@ -159,3 +228,4 @@ def test_clean_api_object_handles_missing_timezone():
     # Verify timezone field is either None or not present
     timezone_value = cleaned["spec"].get("timeZone")
     assert timezone_value is None or "timeZone" not in cleaned["spec"]
+

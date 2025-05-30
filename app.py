@@ -19,6 +19,7 @@ from kron import (
     update_cronjob,
     delete_cronjob,
     delete_job,
+    _interpret_cron_schedule,
 )
 
 app = Flask(__name__, static_url_path="", static_folder="static")
@@ -109,6 +110,19 @@ def view_namespace(namespace):
                 pod for pod in all_pods if pod_is_owned_by(pod, job["metadata"]["name"])
             ]
         cronjob_detail["jobs"] = jobs
+
+        # Add interpreted schedule
+        if (
+            cronjob_detail
+            and "spec" in cronjob_detail
+            and "schedule" in cronjob_detail["spec"]
+        ):
+            cronjob_detail["interpreted_schedule"] = _interpret_cron_schedule(
+                cronjob_detail["spec"]["schedule"]
+            )
+        else:
+            cronjob_detail["interpreted_schedule"] = "Unknown schedule"
+
         cronjobs_with_details.append(cronjob_detail)
 
     return render_template(

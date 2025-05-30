@@ -68,7 +68,7 @@
       </tr>
     </table>
     <p>
-      Schedule: <code>{{ cronjob.spec.schedule }}</code><br />
+      Schedule: <code>{{ cronjob.spec.schedule }}</code> <em>({{ cronjob.interpreted_schedule }})</em><br />
       {% if cronjob.spec.timeZone %}
         Timezone: <code>{{ cronjob.spec.timeZone }}</code><br />
       {% endif %}
