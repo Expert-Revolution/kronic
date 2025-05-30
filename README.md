@@ -119,6 +119,35 @@ Kronic is a small Flask app built with:
 - [PicoCSS](https://picocss.com/)
 
 
+## Development and Testing
+
+### Running Tests
+
+Kronic has both unit tests and integration tests:
+
+**Unit Tests** (fast, no external dependencies):
+```bash
+pytest tests/ -m "not integration"
+```
+
+**Integration Tests** (slower, requires Docker and kind):
+```bash
+pytest tests/ -m "integration"
+```
+
+**All Tests**:
+```bash
+pytest tests/
+```
+
+The integration tests automatically create and manage ephemeral Kubernetes clusters using [kind](https://kind.sigs.k8s.io/) to test Kronic's functionality against real Kubernetes resources. They require:
+- Docker
+- kubectl 
+- kind (automatically installed if not present)
+
+Integration tests are automatically skipped if the required tools are not available.
+
+
 ## Todo
 
 - [x] CI/CD pipeline and versioning
@@ -126,6 +155,7 @@ Kronic is a small Flask app built with:
 - [x] Allow/Deny lists for namespaces
 - [x] Support a namespaced install (no cluster-wide view)
 - [x] Built-in auth option
+- [x] Integration tests against ephemeral Kubernetes cluster
 - [ ] Display elements and handling for `spec.timezone`
 - [ ] NetworkPolicy in helm chart
 - [ ] Timeline / Cron schedule interpreter or display
@@ -134,5 +164,4 @@ Kronic is a small Flask app built with:
 - [ ] Error handling for js apiClient
 - [ ] Better logging from Flask app and Kron module
 - [ ] Improve test coverage
-- [ ] Integration tests against ephemeral k3s cluster
 - [ ] Improve localdev stack with automated k3d cluster provisioning
