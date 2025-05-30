@@ -138,10 +138,11 @@ def check_integration_requirements():
 
 
 # Skip all integration tests if requirements not met
-pytestmark = pytest.mark.skipif(
-    not check_integration_requirements(),
-    reason="Integration test requirements not available (kind, docker, kubectl)"
-)
+integration_skip_reason = "Integration test requirements not available (kind, docker, kubectl)"
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(not check_integration_requirements(), reason=integration_skip_reason)
+]
 
 
 @pytest.fixture(scope="session")
