@@ -177,3 +177,55 @@ def test_interpret_cron_schedule_none():
 def test_interpret_cron_schedule_complex():
     result = kron._interpret_cron_schedule("15,45 */6 * * 1-5")
     assert result == "Custom schedule: 15,45 */6 * * 1-5"
+
+def test_clean_api_object_preserves_timezone():
+    """Test that timezone field is properly preserved when cleaning API objects"""
+    from kubernetes import client
+    from tests.objects import create_job
+
+    # Create a CronJob with timezone
+    job_template = create_job()
+    cronjob_spec = client.V1CronJobSpec(
+        schedule="0 9 * * *", job_template=job_template, time_zone="America/New_York"
+    )
+    cronjob = client.V1CronJob(
+        api_version="batch/v1",
+        kind="CronJob",
+        metadata=client.V1ObjectMeta(name="test-tz", namespace="test"),
+        spec=cronjob_spec,
+    )
+
+    # Clean the API object
+    cleaned = kron._clean_api_object(cronjob)
+
+    # Verify timezone is preserved and correctly named
+    assert "timeZone" in cleaned["spec"]
+    assert cleaned["spec"]["timeZone"] == "America/New_York"
+
+
+def test_clean_api_object_handles_missing_timezone():
+    """Test that missing timezone field doesn't cause issues"""
+    from kubernetes import client
+    from tests.objects import create_job
+
+    # Create a CronJob without timezone (default behavior)
+    job_template = create_job()
+    cronjob_spec = client.V1CronJobSpec(
+        schedule="0 9 * * *",
+        job_template=job_template,
+        # No time_zone specified
+    )
+    cronjob = client.V1CronJob(
+        api_version="batch/v1",
+        kind="CronJob",
+        metadata=client.V1ObjectMeta(name="test-no-tz", namespace="test"),
+        spec=cronjob_spec,
+    )
+
+    # Clean the API object
+    cleaned = kron._clean_api_object(cronjob)
+
+    # Verify timezone field is either None or not present
+    timezone_value = cleaned["spec"].get("timeZone")
+    assert timezone_value is None or "timeZone" not in cleaned["spec"]
+
