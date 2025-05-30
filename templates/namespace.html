@@ -20,6 +20,10 @@
           failing = true;
         }
       }
+    })
+    .catch(err => {
+      isLoading = false;
+      console.error('Failed to load jobs:', err);
     });
   };
   ">
@@ -55,6 +59,9 @@
               apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'clone', 'POST', data, false)
               .then(response => {
                 window.location.href = `/namespaces/{{namespace}}/cronjobs/${cloneJobName}`;
+              })
+              .catch(err => {
+                console.error('Clone failed:', err);
               });">
             Clone
           </div>
@@ -135,10 +142,19 @@
       getLogs(namespace, podname) {
         this.isLoading = true;
         fetch(`/api/namespaces/${namespace}/pods/${podname}/logs`)
-          .then(res => res.text())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.text();
+          })
           .then(data => {
             this.isLoading = false;
             this.logs = data;
+          })
+          .catch(err => {
+            this.isLoading = false;
+            this.logs = `Error fetching logs: ${err.message}`;
           })
       }
     }
@@ -152,7 +168,28 @@
           body: data,
           headers: { 'Content-Type': 'application/json' }
         })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            // Try to parse error response as JSON, fallback to status text
+            return response.text().then(text => {
+              let errorMessage;
+              try {
+                const errorData = JSON.parse(text);
+                if (errorData.exception && errorData.exception.message) {
+                  errorMessage = errorData.exception.message;
+                } else if (errorData.error) {
+                  errorMessage = errorData.error;
+                } else {
+                  errorMessage = text || response.statusText;
+                }
+              } catch (e) {
+                errorMessage = text || response.statusText;
+              }
+              throw new Error(`HTTP ${response.status}: ${errorMessage}`);
+            });
+          }
+          return response.json();
+        })
         .then(result => {
           if (refresh) {
             location.reload();
@@ -160,7 +197,8 @@
           return result;
         })
         .catch(err => {
-          alert(`Something went wrong: ${err}`);
+          alert(`API Error: ${err.message}`);
+          throw err; // Re-throw so callers can handle if needed
         })
 
     )
