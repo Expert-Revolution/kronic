@@ -97,7 +97,41 @@ kubectl -n kronic port-forward deployment/kronic 8000:8000
 
 ## Running Locally
 
-Kronic can use a `KUBECONFIG` file to run locally against a cluster. To do so:
+### Automated Local Development (Recommended)
+
+For a complete local development environment with automated k3d cluster provisioning:
+
+**Prerequisites:**
+- Docker
+- [k3d](https://k3d.io/) - Lightweight Kubernetes in Docker
+
+**Quick Start:**
+```bash
+# Start complete development environment
+./scripts/dev.sh up
+
+# Access Kronic at http://localhost:5000
+# Default credentials: admin / test2
+```
+
+**Available Commands:**
+```bash
+./scripts/dev.sh up       # Start k3d cluster and Kronic
+./scripts/dev.sh down     # Stop and clean up everything
+./scripts/dev.sh restart  # Restart the environment
+./scripts/dev.sh status   # Check status of services
+./scripts/dev.sh logs     # View Kronic logs
+```
+
+The development script automatically:
+- Creates a k3d cluster named `kronic-localdev`
+- Configures networking for container communication  
+- Builds and starts Kronic with docker-compose
+- Sets up proper kubeconfig mounting and permissions
+
+### Manual Local Deployment
+
+If you prefer to run against an existing cluster, Kronic can use any `KUBECONFIG` file:
 
 ```
 docker run -i --name kronic \
@@ -164,4 +198,4 @@ Integration tests are automatically skipped if the required tools are not availa
 - [ ] Error handling for js apiClient
 - [ ] Better logging from Flask app and Kron module
 - [ ] Improve test coverage
-- [ ] Improve localdev stack with automated k3d cluster provisioning
+- [x] Improve localdev stack with automated k3d cluster provisioning
