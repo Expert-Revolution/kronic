@@ -43,10 +43,9 @@ if ADMIN_PASSWORD:
 if NAMESPACE_ONLY:
     try:
         KRONIC_NAMESPACE = os.environ["KRONIC_NAMESPACE"]
+        ALLOW_NAMESPACES = KRONIC_NAMESPACE
     except KeyError as e:
         log.error(
             "ERROR: KRONIC_NAMESPACE variable not set and a NAMESPACE_ONLY mode was specified."
         )
         sys.exit(1)
-
-    ALLOW_NAMESPACES = KRONIC_NAMESPACE
