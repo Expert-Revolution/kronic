@@ -35,8 +35,15 @@ def namespace_filter(func):
     def wrapper(namespace: str = None, *args, **kwargs):
         if config.ALLOW_NAMESPACES and namespace:
             if namespace in config.ALLOW_NAMESPACES.split(","):
+                log.debug(f"Namespace access granted for '{namespace}' (in allowed list)")
                 return func(namespace, *args, **kwargs)
+            else:
+                log.warning(f"Namespace access denied for '{namespace}' (not in allowed list: {config.ALLOW_NAMESPACES})")
         else:
+            if namespace:
+                log.debug(f"Namespace access granted for '{namespace}' (no restrictions configured)")
+            else:
+                log.debug("Namespace access granted for all namespaces (no restrictions configured)")
             return func(namespace, *args, **kwargs)
 
         return False
@@ -261,11 +268,13 @@ def get_cronjobs(namespace: str = None) -> List[dict]:
         cronjobs = []
         if not namespace:
             if not config.ALLOW_NAMESPACES:
+                log.debug("Listing cronjobs for all namespaces")
                 cronjobs = [
                     _clean_api_object(item)
                     for item in batch.list_cron_job_for_all_namespaces().items
                 ]
             else:
+                log.debug(f"Listing cronjobs for allowed namespaces: {config.ALLOW_NAMESPACES}")
                 cronjobs = []
                 for allowed in config.ALLOW_NAMESPACES.split(","):
                     cronjobs.extend(
@@ -277,6 +286,7 @@ def get_cronjobs(namespace: str = None) -> List[dict]:
                         ]
                     )
         else:
+            log.debug(f"Listing cronjobs for namespace '{namespace}'")
             cronjobs = [
                 _clean_api_object(item)
                 for item in batch.list_namespaced_cron_job(namespace=namespace).items
@@ -286,10 +296,11 @@ def get_cronjobs(namespace: str = None) -> List[dict]:
         sorted_cronjobs = sorted(
             _filter_dict_fields(cronjobs, fields), key=lambda x: x["name"]
         )
+        log.info(f"Retrieved {len(sorted_cronjobs)} cronjobs" + (f" from namespace '{namespace}'" if namespace else ""))
         return sorted_cronjobs
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while getting cronjobs: {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -313,9 +324,15 @@ def get_cronjob(namespace: str, cronjob_name: str) -> dict:
         dict: A dict of the CronJob API object
     """
     try:
+        log.debug(f"Getting cronjob '{cronjob_name}' in namespace '{namespace}'")
         cronjob = batch.read_namespaced_cron_job(cronjob_name, namespace)
+        log.debug(f"Successfully retrieved cronjob '{cronjob_name}' from namespace '{namespace}'")
         return _clean_api_object(cronjob)
-    except ApiException:
+    except ApiException as e:
+        if e.status == 404:
+            log.warning(f"CronJob '{cronjob_name}' not found in namespace '{namespace}'")
+        else:
+            log.error(f"Kubernetes API error while getting cronjob '{cronjob_name}': {e.reason} (status: {e.status})")
         return False
 
 
@@ -331,6 +348,7 @@ def get_jobs(namespace: str, cronjob_name: str) -> List[dict]:
         List of dicts: A list of dicts of each job created by the given CronJob name
     """
     try:
+        log.debug(f"Getting jobs for cronjob '{cronjob_name}' in namespace '{namespace}'")
         jobs = batch.list_namespaced_job(namespace=namespace)
         cleaned_jobs = [_clean_api_object(job) for job in jobs.items]
 
@@ -344,10 +362,11 @@ def get_jobs(namespace: str, cronjob_name: str) -> List[dict]:
         for job in filtered_jobs:
             job["status"]["age"] = _get_time_since(job["status"]["startTime"])
 
+        log.info(f"Retrieved {len(filtered_jobs)} jobs for cronjob '{cronjob_name}' in namespace '{namespace}'")
         return filtered_jobs
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while getting jobs for cronjob '{cronjob_name}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -422,19 +441,28 @@ def get_jobs_and_pods(namespace: str, cronjob_name: str) -> List[dict]:
 def get_pod_logs(namespace: str, pod_name: str) -> str:
     """Return plain text logs for <pod_name> in <namespace>"""
     try:
+        log.debug(f"Getting logs for pod '{pod_name}' in namespace '{namespace}'")
         logs = v1.read_namespaced_pod_log(
             pod_name, namespace, tail_lines=1000, timestamps=True
         )
+        log.debug(f"Successfully retrieved logs for pod '{pod_name}' in namespace '{namespace}'")
         return logs
 
     except ApiException as e:
         if e.status == 404:
-            return f"Kronic> Error fetching logs: {e.reason}"
+            error_msg = f"Kronic> Error fetching logs: {e.reason}"
+            log.warning(f"Pod '{pod_name}' not found in namespace '{namespace}' when getting logs")
+            return error_msg
+        else:
+            error_msg = f"Kronic> Error fetching logs: {e.reason}"
+            log.error(f"Kubernetes API error while getting logs for pod '{pod_name}': {e.reason} (status: {e.status})")
+            return error_msg
 
 
 @namespace_filter
 def trigger_cronjob(namespace: str, cronjob_name: str) -> dict:
     try:
+        log.info(f"Triggering cronjob '{cronjob_name}' in namespace '{namespace}'")
         # Retrieve the CronJob template
         cronjob = batch.read_namespaced_cron_job(name=cronjob_name, namespace=namespace)
         job_template = cronjob.spec.job_template
@@ -451,13 +479,15 @@ def trigger_cronjob(namespace: str, cronjob_name: str) -> dict:
             "kronic.mshade.org/created-from": cronjob_name,
         }
 
+        log.debug(f"Creating manual job '{job_template.metadata.name}' from cronjob '{cronjob_name}'")
         trigger_job = batch.create_namespaced_job(
             body=job_template, namespace=namespace
         )
+        log.info(f"Successfully triggered cronjob '{cronjob_name}' in namespace '{namespace}' - created job '{job_template.metadata.name}'")
         return _clean_api_object(trigger_job)
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while triggering cronjob '{cronjob_name}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -481,17 +511,23 @@ def toggle_cronjob_suspend(namespace: str, cronjob_name: str) -> dict:
         dict: The full cronjob object is returned as a dict
     """
     try:
+        log.debug(f"Getting current suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'")
         suspended_status = batch.read_namespaced_cron_job_status(
             name=cronjob_name, namespace=namespace
         )
-        patch_body = {"spec": {"suspend": not suspended_status.spec.suspend}}
+        current_suspend = suspended_status.spec.suspend
+        new_suspend = not current_suspend
+        
+        log.info(f"Toggling cronjob '{cronjob_name}' suspend status from {current_suspend} to {new_suspend} in namespace '{namespace}'")
+        patch_body = {"spec": {"suspend": new_suspend}}
         cronjob = batch.patch_namespaced_cron_job(
             name=cronjob_name, namespace=namespace, body=patch_body
         )
+        log.info(f"Successfully {'suspended' if new_suspend else 'resumed'} cronjob '{cronjob_name}' in namespace '{namespace}'")
         return _clean_api_object(cronjob)
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while toggling suspend for cronjob '{cronjob_name}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -517,13 +553,17 @@ def update_cronjob(namespace: str, spec: str) -> dict:
     try:
         name = spec["metadata"]["name"]
         if get_cronjob(namespace, name):
+            log.info(f"Updating existing cronjob '{name}' in namespace '{namespace}'")
             cronjob = batch.patch_namespaced_cron_job(name, namespace, spec)
         else:
+            log.info(f"Creating new cronjob '{name}' in namespace '{namespace}'")
             cronjob = batch.create_namespaced_cron_job(namespace, spec)
+        
+        log.info(f"Successfully updated/created cronjob '{name}' in namespace '{namespace}'")
         return _clean_api_object(cronjob)
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while updating cronjob '{spec.get('metadata', {}).get('name', 'unknown')}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -547,11 +587,13 @@ def delete_cronjob(namespace: str, cronjob_name: str) -> dict:
         dict: Returns a dict of the deleted CronJob, or an error status
     """
     try:
+        log.info(f"Deleting cronjob '{cronjob_name}' in namespace '{namespace}'")
         deleted = batch.delete_namespaced_cron_job(cronjob_name, namespace)
+        log.info(f"Successfully deleted cronjob '{cronjob_name}' from namespace '{namespace}'")
         return _clean_api_object(deleted)
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while deleting cronjob '{cronjob_name}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {
@@ -575,11 +617,13 @@ def delete_job(namespace: str, job_name: str) -> dict:
         str: Returns a dict of the deleted Job, or an error status
     """
     try:
+        log.info(f"Deleting job '{job_name}' in namespace '{namespace}'")
         deleted = batch.delete_namespaced_job(job_name, namespace)
+        log.info(f"Successfully deleted job '{job_name}' from namespace '{namespace}'")
         return _clean_api_object(deleted)
 
     except ApiException as e:
-        log.error(e)
+        log.error(f"Kubernetes API error while deleting job '{job_name}': {e.reason} (status: {e.status})")
         response = {
             "error": 500,
             "exception": {

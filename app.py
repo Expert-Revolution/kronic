@@ -3,6 +3,7 @@ from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
 
 from functools import wraps
+import logging
 import yaml
 from yaml.scanner import ScannerError
 from yaml.parser import ParserError
@@ -27,17 +28,25 @@ from kron import (
 app = Flask(__name__, static_url_path="", static_folder="static")
 auth = HTTPBasicAuth()
 
+# Setup logger for Flask app
+log = logging.getLogger("app.flask")
+
 
 @auth.verify_password
 def verify_password(username, password):
     # No users defined, so no auth enabled
     if not config.USERS:
+        log.debug("Authentication bypassed - no users configured")
         return True
     else:
         if username in config.USERS and check_password_hash(
             config.USERS.get(username), password
         ):
+            log.info(f"User '{username}' authenticated successfully")
             return username
+        else:
+            log.warning(f"Authentication failed for user '{username}'")
+            return False
 
 
 # A namespace filter decorator
@@ -46,10 +55,13 @@ def namespace_filter(func):
     def wrapper(namespace, *args, **kwargs):
         if config.ALLOW_NAMESPACES:
             if namespace in config.ALLOW_NAMESPACES.split(","):
+                log.debug(f"Access granted to namespace '{namespace}'")
                 return func(namespace, *args, **kwargs)
         else:
+            log.debug(f"Access granted to namespace '{namespace}' (no namespace restrictions)")
             return func(namespace, *args, **kwargs)
 
+        log.warning(f"Access denied to namespace '{namespace}' due to KRONIC_ALLOW_NAMESPACES setting")
         data = {
             "error": f"Request to {namespace} denied due to KRONIC_ALLOW_NAMESPACES setting",
             "namespace": namespace,
@@ -76,71 +88,102 @@ def _validate_cronjob_yaml(yaml_content):
     try:
         # First validate YAML syntax
         parsed = yaml.safe_load(yaml_content)
+        log.debug("YAML syntax validation passed")
     except (ScannerError, ParserError) as e:
-        return False, None, f"Invalid YAML syntax: {str(e)}"
+        error_msg = f"Invalid YAML syntax: {str(e)}"
+        log.error(f"YAML validation failed: {error_msg}")
+        return False, None, error_msg
     except Exception as e:
-        return False, None, f"Error parsing YAML: {str(e)}"
+        error_msg = f"Error parsing YAML: {str(e)}"
+        log.error(f"YAML parsing failed: {error_msg}")
+        return False, None, error_msg
 
     # Check if it's a dictionary
     if not isinstance(parsed, dict):
-        return False, None, "YAML must be a dictionary/object"
+        error_msg = "YAML must be a dictionary/object"
+        log.error(f"YAML validation failed: {error_msg}")
+        return False, None, error_msg
 
     # Validate basic CronJob structure
     required_fields = ["apiVersion", "kind", "metadata", "spec"]
     for field in required_fields:
         if field not in parsed:
-            return False, None, f"Missing required field: {field}"
+            error_msg = f"Missing required field: {field}"
+            log.error(f"CronJob validation failed: {error_msg}")
+            return False, None, error_msg
 
     # Validate kind is CronJob
     if parsed.get("kind") != "CronJob":
-        return False, None, f"Expected kind 'CronJob', got '{parsed.get('kind')}'"
+        error_msg = f"Expected kind 'CronJob', got '{parsed.get('kind')}'"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     # Validate apiVersion
     valid_api_versions = ["batch/v1", "batch/v1beta1"]
     if parsed.get("apiVersion") not in valid_api_versions:
+        error_msg = f"Invalid apiVersion '{parsed.get('apiVersion')}'. Expected one of: {', '.join(valid_api_versions)}"
+        log.error(f"CronJob validation failed: {error_msg}")
         return (
             False,
             None,
-            f"Invalid apiVersion '{parsed.get('apiVersion')}'. Expected one of: {', '.join(valid_api_versions)}",
+            error_msg,
         )
 
     # Validate metadata has name
     metadata = parsed.get("metadata", {})
     if not isinstance(metadata, dict):
-        return False, None, "metadata must be a dictionary"
+        error_msg = "metadata must be a dictionary"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     if not metadata.get("name"):
-        return False, None, "metadata.name is required"
+        error_msg = "metadata.name is required"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     # Validate spec has required fields
     spec = parsed.get("spec", {})
     if not isinstance(spec, dict):
-        return False, None, "spec must be a dictionary"
+        error_msg = "spec must be a dictionary"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     schedule = spec.get("schedule")
     if not schedule:
-        return False, None, "spec.schedule is required"
+        error_msg = "spec.schedule is required"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     # Basic cron schedule validation (should have 5 fields)
     if isinstance(schedule, str):
         schedule_parts = schedule.strip().split()
         if len(schedule_parts) != 5:
+            error_msg = f"spec.schedule '{schedule}' is invalid. Cron schedule must have exactly 5 fields (minute hour day-of-month month day-of-week)"
+            log.error(f"CronJob validation failed: {error_msg}")
             return (
                 False,
                 None,
-                f"spec.schedule '{schedule}' is invalid. Cron schedule must have exactly 5 fields (minute hour day-of-month month day-of-week)",
+                error_msg,
             )
 
     if not spec.get("jobTemplate"):
-        return False, None, "spec.jobTemplate is required"
+        error_msg = "spec.jobTemplate is required"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     job_template = spec.get("jobTemplate", {})
     if not isinstance(job_template, dict):
-        return False, None, "spec.jobTemplate must be a dictionary"
+        error_msg = "spec.jobTemplate must be a dictionary"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
     if not job_template.get("spec"):
-        return False, None, "spec.jobTemplate.spec is required"
+        error_msg = "spec.jobTemplate.spec is required"
+        log.error(f"CronJob validation failed: {error_msg}")
+        return False, None, error_msg
 
+    cronjob_name = metadata.get("name")
+    log.info(f"CronJob YAML validation successful for '{cronjob_name}'")
     return True, parsed, None
 
 
@@ -375,13 +418,19 @@ def api_get_cronjob(namespace, cronjob_name):
 @namespace_filter
 @auth.login_required
 def api_clone_cronjob(namespace, cronjob_name):
+    log.info(f"Cloning cronjob '{cronjob_name}' in namespace '{namespace}'")
     cronjob_spec = get_cronjob(namespace, cronjob_name)
     new_name = request.json["name"]
+    log.debug(f"Cloning cronjob '{cronjob_name}' to '{new_name}'")
     cronjob_spec["metadata"]["name"] = new_name
     cronjob_spec["spec"]["jobTemplate"]["metadata"]["name"] = new_name
     cronjob_spec = _strip_immutable_fields(cronjob_spec)
     print(cronjob_spec)
     cronjob = update_cronjob(namespace, cronjob_spec)
+    if "error" in cronjob:
+        log.error(f"Failed to clone cronjob '{cronjob_name}' to '{new_name}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+    else:
+        log.info(f"Successfully cloned cronjob '{cronjob_name}' to '{new_name}' in namespace '{namespace}'")
     return cronjob
 
 
@@ -389,8 +438,15 @@ def api_clone_cronjob(namespace, cronjob_name):
 @namespace_filter
 @auth.login_required
 def api_create_cronjob(namespace):
+    log.info(f"Creating cronjob in namespace '{namespace}'")
     cronjob_spec = request.json["data"]
+    cronjob_name = cronjob_spec.get("metadata", {}).get("name", "unknown")
+    log.debug(f"Creating cronjob '{cronjob_name}' in namespace '{namespace}'")
     cronjob = update_cronjob(namespace, cronjob_spec)
+    if "error" in cronjob:
+        log.error(f"Failed to create cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+    else:
+        log.info(f"Successfully created cronjob '{cronjob_name}' in namespace '{namespace}'")
     return cronjob
 
 
@@ -400,7 +456,12 @@ def api_create_cronjob(namespace):
 @namespace_filter
 @auth.login_required
 def api_delete_cronjob(namespace, cronjob_name):
+    log.info(f"Deleting cronjob '{cronjob_name}' in namespace '{namespace}'")
     deleted = delete_cronjob(namespace, cronjob_name)
+    if "error" in deleted:
+        log.error(f"Failed to delete cronjob '{cronjob_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}")
+    else:
+        log.info(f"Successfully deleted cronjob '{cronjob_name}' in namespace '{namespace}'")
     return deleted
 
 
@@ -413,11 +474,18 @@ def api_delete_cronjob(namespace, cronjob_name):
 def api_toggle_cronjob_suspend(namespace, cronjob_name):
     if request.method == "GET":
         """Return the suspended status of the <cronjob_name>"""
+        log.debug(f"Getting suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'")
         cronjob = get_cronjob(namespace, cronjob_name)
         return cronjob
     if request.method == "POST":
         """Toggle the suspended status of <cronjob_name>"""
+        log.info(f"Toggling suspend status for cronjob '{cronjob_name}' in namespace '{namespace}'")
         cronjob = toggle_cronjob_suspend(namespace, cronjob_name)
+        if "error" in cronjob:
+            log.error(f"Failed to toggle suspend for cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+        else:
+            suspend_status = cronjob.get("spec", {}).get("suspend", False)
+            log.info(f"Successfully {'suspended' if suspend_status else 'resumed'} cronjob '{cronjob_name}' in namespace '{namespace}'")
         return cronjob
 
 
@@ -428,10 +496,14 @@ def api_toggle_cronjob_suspend(namespace, cronjob_name):
 @auth.login_required
 def api_trigger_cronjob(namespace, cronjob_name):
     """Manually trigger a job from <cronjob_name>"""
+    log.info(f"Triggering cronjob '{cronjob_name}' in namespace '{namespace}'")
     cronjob = trigger_cronjob(namespace, cronjob_name)
     status = 200
     if "error" in cronjob:
         status = cronjob["error"]
+        log.error(f"Failed to trigger cronjob '{cronjob_name}' in namespace '{namespace}': {cronjob.get('exception', {}).get('message', 'Unknown error')}")
+    else:
+        log.info(f"Successfully triggered cronjob '{cronjob_name}' in namespace '{namespace}'")
 
     return cronjob, status
 
@@ -464,5 +536,10 @@ def api_get_pod_logs(namespace, pod_name):
 @namespace_filter
 @auth.login_required
 def api_delete_job(namespace, job_name):
+    log.info(f"Deleting job '{job_name}' in namespace '{namespace}'")
     deleted = delete_job(namespace, job_name)
+    if "error" in deleted:
+        log.error(f"Failed to delete job '{job_name}' in namespace '{namespace}': {deleted.get('exception', {}).get('message', 'Unknown error')}")
+    else:
+        log.info(f"Successfully deleted job '{job_name}' in namespace '{namespace}'")
     return deleted
