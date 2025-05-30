@@ -246,8 +246,9 @@ def view_namespace(namespace):
             and "spec" in cronjob_detail
             and "schedule" in cronjob_detail["spec"]
         ):
+            timezone = cronjob_detail["spec"].get("timeZone")
             cronjob_detail["interpreted_schedule"] = _interpret_cron_schedule(
-                cronjob_detail["spec"]["schedule"]
+                cronjob_detail["spec"]["schedule"], timezone
             )
         else:
             cronjob_detail["interpreted_schedule"] = "Unknown schedule"

@@ -134,12 +134,13 @@ def _has_label(api_object: object, k: str, v: str) -> bool:
     return labels.get(k) == v
 
 
-def _interpret_cron_schedule(cron_expression: str) -> str:
+def _interpret_cron_schedule(cron_expression: str, timezone: str = None) -> str:
     """
     Convert a cron expression to human-readable text.
 
     Args:
         cron_expression (str): A cron expression (e.g., "*/10 * * * *")
+        timezone (str, optional): A timezone (e.g., "America/New_York"). Defaults to None.
 
     Returns:
         str: Human-readable description of the schedule
@@ -155,7 +156,10 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
 
     # Handle common patterns
     if cron_expression == "* * * * *":
-        return "Every minute"
+        schedule_str = "Every minute"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     if (
         minute.startswith("*/")
@@ -166,9 +170,12 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
     ):
         interval = minute[2:]
         if interval == "1":
-            return "Every minute"
+            schedule_str = "Every minute"
         else:
-            return f"Every {interval} minutes"
+            schedule_str = f"Every {interval} minutes"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     if (
         minute == "0"
@@ -179,18 +186,30 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
     ):
         interval = hour[2:]
         if interval == "1":
-            return "Every hour"
+            schedule_str = "Every hour"
         else:
-            return f"Every {interval} hours"
+            schedule_str = f"Every {interval} hours"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     if minute == "0" and hour == "0" and day == "*" and month == "*" and weekday == "*":
-        return "Daily at midnight"
+        schedule_str = "Daily at midnight"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     if minute == "0" and hour == "0" and day == "*" and month == "*" and weekday == "0":
-        return "Weekly on Sunday at midnight"
+        schedule_str = "Weekly on Sunday at midnight"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     if minute == "0" and hour == "0" and day == "1" and month == "*" and weekday == "*":
-        return "Monthly on the 1st at midnight"
+        schedule_str = "Monthly on the 1st at midnight"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     # Handle specific times
     if (
@@ -203,7 +222,10 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
         hour_int = int(hour)
         minute_int = int(minute)
         time_str = f"{hour_int:02d}:{minute_int:02d}"
-        return f"Daily at {time_str}"
+        schedule_str = f"Daily at {time_str}"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     # Handle specific weekdays
     if (
@@ -227,7 +249,10 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
         ]
         if 0 <= weekday_int <= 6:
             time_str = f"{hour_int:02d}:{minute_int:02d}"
-            return f"Weekly on {weekdays[weekday_int]} at {time_str}"
+            schedule_str = f"Weekly on {weekdays[weekday_int]} at {time_str}"
+            if timezone:
+                schedule_str += f" ({timezone})"
+            return schedule_str
 
     # Handle monthly schedules
     if (
@@ -241,10 +266,16 @@ def _interpret_cron_schedule(cron_expression: str) -> str:
         minute_int = int(minute)
         day_int = int(day)
         time_str = f"{hour_int:02d}:{minute_int:02d}"
-        return f"Monthly on the {day_int} at {time_str}"
+        schedule_str = f"Monthly on the {day_int} at {time_str}"
+        if timezone:
+            schedule_str += f" ({timezone})"
+        return schedule_str
 
     # Fallback for complex expressions
-    return f"Custom schedule: {cron_expression}"
+    schedule_str = f"Custom schedule: {cron_expression}"
+    if timezone:
+        schedule_str += f" ({timezone})"
+    return schedule_str
 
 
 def pod_is_owned_by(api_dict: dict, owner_name: str) -> bool:
