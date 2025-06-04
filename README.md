@@ -91,7 +91,7 @@ most notably the `ingress` section.
 To install Kronic as `kronic` in its own namespace:
 
 ```
-helm repo add kronic https://mshade.github.io/kronic/
+helm repo add kronic https://davides93.github.io/kronic/
 helm repo update
 
 # Optionally fetch, then customize values file
