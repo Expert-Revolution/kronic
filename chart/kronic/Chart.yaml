@@ -4,10 +4,10 @@ description: Kronic - The simple Kubernetes CronJob Admin UI
 type: application
 version: 0.1.7
 appVersion: "v0.1.4"
-home: https://github.com/mshade/kronic
+home: https://github.com/davides93/kronic
 maintainers:
-  - name: mshade
-    email: mshade@mshade.org
-    url: https://github.com/mshade
+  - name: davides93
+    email: davides93@users.noreply.github.com
+    url: https://github.com/davides93
 annotations:
   artifacthub.io/category: monitoring-logging
