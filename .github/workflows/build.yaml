@@ -2,10 +2,10 @@ name: Build / Test
 
 on:
   push:
-    paths-ignore:
-      - 'k8s/**'
-      - '.github/workflows/chart-testing.yaml'
-
+    #paths-ignore:
+      #- 'k8s/**'
+      #- '.github/workflows/chart-testing.yaml'
+    branches: [ production ]
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: davides93/kronic
