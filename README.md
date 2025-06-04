@@ -28,6 +28,100 @@ Get your hands dirty with the raw YAML to edit a CronJob:
 ![Cronjob Edit view](/.github/kronic-edit.png)
 
 
+## Deployment in Expert Revolution Infrastructure
+
+Kronic is deployed in the Expert Revolution infrastructure using Kubernetes manifests. The deployment consists of three main components:
+
+### Deployment
+
+The Kronic application is deployed in the `monitoring` namespace with the following specifications:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kronic
+  namespace: monitoring
+  labels:
+    app: kronic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kronic
+  template:
+    metadata:
+      labels:
+        app: kronic
+    spec:
+      containers:
+        - name: kronic
+          image: ghcr.io/davides93/kronic:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KRONIC_ALLOW_NAMESPACES
+              value: ""
+            - name: KRONIC_NAMESPACE_ONLY
+              value: ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+```
+
+### Service
+
+The Kronic service exposes the application within the cluster:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kronic
+  namespace: monitoring
+  labels:
+    app: kronic
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: kronic
+```
+
+### Ingress
+
+External access to Kronic is configured using a Traefik IngressRoute:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kronic-ingressroute
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: Host(`kronic.expertrevolution.it`)
+    kind: Rule
+    services:
+    - name: kronic
+      port: 8000
+  tls:
+    secretName: exprev-cert
+```
+
+To access Kronic, navigate to `https://kronic.expertrevolution.it` in your browser.
+
+
 ## Purpose
 
 CronJobs are a powerful tool, but I have found that developers and stakeholders often need an easy way to inspect the status of jobs,
