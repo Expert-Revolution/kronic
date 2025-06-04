@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kronic Helm Chart - Kubernetes CronJob Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: -20px -20px 40px -20px;
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 3em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin: 5px;
+            text-decoration: none;
+        }
+        
+        .badge:hover {
+            background: #0056b3;
+        }
+        
+        .content-section {
+            background: white;
+            padding: 30px;
+            margin: 30px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .content-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #3498db;
+        }
+        
+        .card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .code-block {
+            background: #f1f3f4;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .warning strong {
+            color: #856404;
+        }
+        
+        .screenshot {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 60px;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🕐 Kronic</h1>
+        <p>The Simple Kubernetes CronJob Admin UI</p>
+        <div style="margin-top: 20px;">
+            <a href="https://github.com/davides93/kronic" class="badge">GitHub</a>
+            <a href="https://github.com/davides93/kronic/releases" class="badge">Releases</a>
+            <a href="#installation" class="badge">Install</a>
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Overview</h2>
+        <p>Kronic is a simple and intuitive web-based admin UI for managing Kubernetes CronJobs. It provides an easy way to view, edit, trigger, suspend, and delete CronJobs across your Kubernetes cluster.</p>
+        
+        <div class="warning">
+            <strong>⚠️ Alpha Software:</strong> Kronic is in early alpha. It may eat your cronjobs, pods, or even your job. Avoid exposing Kronic to untrusted parties or networks or using Kronic near anything even vaguely important.
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Screenshots</h2>
+        <div class="grid">
+            <div>
+                <h4>Homepage - CronJobs across namespaces</h4>
+                <img src="https://raw.githubusercontent.com/davides93/kronic/main/.github/kronic-home.png" alt="Kronic Homepage" class="screenshot">
+            </div>
+            <div>
+                <h4>Namespace View - Manage CronJobs</h4>
+                <img src="https://raw.githubusercontent.com/davides93/kronic/main/.github/kronic-namespace.png" alt="Kronic Namespace View" class="screenshot">
+            </div>
+            <div>
+                <h4>Detail View - Job and Pod Status</h4>
+                <img src="https://raw.githubusercontent.com/davides93/kronic/main/.github/kronic-detail.png" alt="Kronic Detail View" class="screenshot">
+            </div>
+            <div>
+                <h4>Edit View - Raw YAML Editing</h4>
+                <img src="https://raw.githubusercontent.com/davides93/kronic/main/.github/kronic-edit.png" alt="Kronic Edit View" class="screenshot">
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section" id="installation">
+        <h2>Helm Chart Installation</h2>
+        
+        <h3>Quick Start</h3>
+        <p>Install Kronic in its own namespace using Helm:</p>
+        
+        <div class="code-block">helm repo add kronic https://davides93.github.io/kronic/
+helm repo update
+
+# Install Kronic in the 'kronic' namespace
+helm install -n kronic --create-namespace kronic kronic/kronic</div>
+
+        <h3>Custom Installation</h3>
+        <p>Customize your installation by fetching and modifying the values file:</p>
+        
+        <div class="code-block"># Fetch the default values
+helm show values kronic/kronic > myvalues.yaml
+
+# Customize myvalues.yaml as needed, then install
+helm install -n kronic --create-namespace kronic kronic/kronic -f myvalues.yaml</div>
+
+        <h3>Accessing Kronic</h3>
+        <p>After installation, get the admin password and access Kronic:</p>
+        
+        <div class="code-block"># Get the generated admin password
+kubectl --namespace kronic get secret kronic -ojsonpath="{.data.password}" | base64 -d
+
+# Port-forward to access locally (if no ingress configured)
+kubectl -n kronic port-forward deployment/kronic 8000:8000</div>
+        
+        <p>Then visit <code>http://localhost:8000</code> and login with username <code>kronic</code> and the retrieved password.</p>
+    </div>
+
+    <div class="content-section">
+        <h2>Configuration Options</h2>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>🔒 Authentication</h3>
+                <p>Built-in HTTP Basic authentication with configurable username and password.</p>
+                <div class="code-block">auth:
+  enabled: true
+  adminUsername: "kronic"
+  adminPassword: ""  # Auto-generated if empty</div>
+            </div>
+            
+            <div class="card">
+                <h3>🌐 Ingress</h3>
+                <p>Configure ingress for external access (use with caution!).</p>
+                <div class="code-block">ingress:
+  enabled: true
+  hosts:
+    - host: kronic.example.com
+      paths: ["/"]</div>
+            </div>
+            
+            <div class="card">
+                <h3>🎯 Namespace Scope</h3>
+                <p>Limit Kronic to specific namespaces or current namespace only.</p>
+                <div class="code-block">env:
+  KRONIC_ALLOW_NAMESPACES: "qa,test,dev"
+  KRONIC_NAMESPACE_ONLY: "false"</div>
+            </div>
+            
+            <div class="card">
+                <h3>🛡️ Network Policy</h3>
+                <p>Control network traffic to Kronic pods.</p>
+                <div class="code-block">networkPolicy:
+  enabled: true
+  namespaceSelector: {}
+  podSelector: {}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Chart Information</h2>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>📊 Chart Details</h3>
+                <ul>
+                    <li><strong>Chart Name:</strong> kronic</li>
+                    <li><strong>Chart Version:</strong> 0.1.7</li>
+                    <li><strong>App Version:</strong> v0.1.4</li>
+                    <li><strong>Type:</strong> application</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>🔧 Requirements</h3>
+                <ul>
+                    <li>Kubernetes 1.16+</li>
+                    <li>Helm 3.0+</li>
+                    <li>RBAC enabled cluster</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>🎯 Features</h3>
+                <ul>
+                    <li>View CronJobs across namespaces</li>
+                    <li>Trigger CronJobs manually</li>
+                    <li>Suspend/Resume CronJobs</li>
+                    <li>Edit CronJob YAML</li>
+                    <li>Clone existing CronJobs</li>
+                    <li>View Job and Pod status</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>🔗 Links</h3>
+                <ul>
+                    <li><a href="https://github.com/davides93/kronic">Source Code</a></li>
+                    <li><a href="https://github.com/davides93/kronic/releases">Releases</a></li>
+                    <li><a href="https://github.com/davides93/kronic/blob/main/chart/kronic/values.yaml">Values.yaml</a></li>
+                    <li><a href="https://github.com/davides93/kronic/issues">Issue Tracker</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Advanced Configuration Examples</h2>
+        
+        <h3>Ingress with TLS</h3>
+        <div class="code-block">ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: kronic.example.com
+      paths: ["/"]
+  tls:
+    - secretName: kronic-tls
+      hosts:
+        - kronic.example.com</div>
+
+        <h3>Custom Resource Limits</h3>
+        <div class="code-block">resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi</div>
+
+        <h3>External Secret for Authentication</h3>
+        <div class="code-block"># Create secret first
+kubectl create secret generic kronic-auth --from-literal=password=mysecretpassword
+
+# Use in values
+auth:
+  enabled: true
+  existingSecretName: "kronic-auth"</div>
+    </div>
+
+    <div class="content-section">
+        <h2>Security Considerations</h2>
+        
+        <div class="warning">
+            <strong>🚨 Important Security Notice:</strong> Avoid exposing Kronic publicly! The default configuration provides basic authentication but offers only minimal protection. Always use proper ingress security, network policies, and access controls when deploying in production environments.
+        </div>
+        
+        <ul>
+            <li>Use strong, unique passwords for authentication</li>
+            <li>Enable TLS/SSL for ingress connections</li>
+            <li>Implement network policies to restrict access</li>
+            <li>Limit namespace access using environment variables</li>
+            <li>Monitor and audit CronJob modifications</li>
+            <li>Keep Kronic updated to the latest version</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p>
+            <a href="https://github.com/davides93/kronic" class="btn">View on GitHub</a>
+            <a href="https://github.com/davides93/kronic/releases" class="btn btn-secondary">Download</a>
+        </p>
+        <p>Made with ❤️ for the Kubernetes community</p>
+        <p>&copy; 2024 Kronic Project. Licensed under Apache 2.0.</p>
+    </div>
+</body>
+</html>
