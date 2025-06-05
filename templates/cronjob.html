@@ -135,7 +135,16 @@
         </div>
         
         <label for="container-command">Command:</label>
-        <textarea id="container-command" x-model="container.command" @input="updateYaml()" rows="3" placeholder='["/bin/sh", "-c", "echo hello world"]'></textarea>
+        <textarea id="container-command" x-model="container.command" @input="updateYaml()" rows="3" placeholder='["curl", "-v", "-X", "POST", "http://example.com/api", "-d", "{\"key\": \"value\"}"]'></textarea>
+        
+        <!-- JSON Helper for -d parameter -->
+        <div x-show="container.command.includes('-d')" style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1);">
+          <h4>JSON Data Helper</h4>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Enter JSON data for the -d parameter. This will help format your JSON correctly.</p>
+          <label for="json-helper">JSON Data:</label>
+          <textarea id="json-helper" x-model="jsonData" @input="updateCommandWithJson()" rows="4" placeholder='{"accessToken": "string", "username": "RPA", "userId": "0"}'></textarea>
+          <button type="button" @click="formatJson()" style="margin-top: 0.5rem;">Format JSON</button>
+        </div>
         
         <div class="grid">
           <div>
@@ -280,17 +289,17 @@ function cronEditor() {
     cronJobNamespace: '',
     cronJobSuspend: 'false',
     schedule: {
-      minute: '*',
+      minute: '0',
       hour: '*',
       day: '*',
       month: '*',
       weekday: '*'
     },
     container: {
-      name: 'example',
-      image: 'busybox:latest',
-      command: '["/bin/sh", "-c", "echo hello; date"]',
-      restartPolicy: 'OnFailure'
+      name: 'curl-{name-placeholder}',
+      image: 'curlimages/curl:latest',
+      command: '["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", "{\\"accessToken\\": \\"string\\", \\"username\\": \\"RPA\\", \\"userId\\": \\"0\\"}"]',
+      restartPolicy: 'Never'
     },
     nodeSelector: [
       { key: 'kubernetes.io/os', value: 'linux' }
@@ -311,6 +320,7 @@ function cronEditor() {
       requiredNodeValue: 'spot'
     },
     yamlContent: '',
+    jsonData: '{"accessToken": "string", "username": "RPA", "userId": "0"}',
 
     initFromYaml(yamlStr) {
       this.yamlContent = yamlStr;
@@ -495,8 +505,11 @@ kind: CronJob
 metadata:
   name: ${this.cronJobName || 'my-cronjob'}
   namespace: ${this.cronJobNamespace || 'default'}
+  labels:
+    app: ${this.cronJobName || 'my-cronjob'}
 spec:
   schedule: "${this.getCurrentCronExpression()}"
+  concurrencyPolicy: Forbid
   suspend: ${this.cronJobSuspend}
   jobTemplate:
     spec:
@@ -602,6 +615,20 @@ spec:
 
     removeToleration(index) {
       this.tolerations.splice(index, 1);
+      this.updateYaml();
+    },
+
+    formatJson() {
+      try {
+        const parsed = JSON.parse(this.jsonData);
+        this.jsonData = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        alert('Invalid JSON format. Please check your syntax.');
+      }
+    },
+
+    updateCommandWithJson() {
+      // Update the command when JSON data changes
       this.updateYaml();
     }
   }
