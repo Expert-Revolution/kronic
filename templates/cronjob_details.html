@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block content %}
+<a href="/namespaces/{{cronjob.metadata.namespace}}">«back to {{cronjob.metadata.namespace}}</a>
+<div class="grid">
+  <div><h2>{% block title %}{{cronjob.metadata.name}} in {{cronjob.metadata.namespace}}{% endblock %}</h2></div>
+  <div style="text-align: right;">
+    <a role="button" href="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}">Edit</a>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Basic Information -->
+  <section>
+    <h3>Basic Information</h3>
+    <p><strong>Name:</strong> {{cronjob.metadata.name}}</p>
+    <p><strong>Namespace:</strong> {{cronjob.metadata.namespace}}</p>
+    {% if cronjob.metadata.labels %}
+    <p><strong>Labels:</strong></p>
+    <ul>
+      {% for key, value in cronjob.metadata.labels.items() %}
+      <li><code>{{key}}: {{value}}</code></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if cronjob.metadata.annotations %}
+    <p><strong>Annotations:</strong></p>
+    <ul>
+      {% for key, value in cronjob.metadata.annotations.items() %}
+      <li><code>{{key}}: {{value}}</code></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <!-- Schedule Information -->
+  <section>
+    <h3>Schedule Configuration</h3>
+    <p><strong>Schedule:</strong> <code>{{cronjob.spec.schedule}}</code></p>
+    {% if cronjob.spec.timeZone %}
+    <p><strong>Timezone:</strong> <code>{{cronjob.spec.timeZone}}</code></p>
+    {% endif %}
+    <p><strong>Suspend:</strong> {{cronjob.spec.suspend | default(false)}}</p>
+    {% if cronjob.spec.successfulJobsHistoryLimit %}
+    <p><strong>Successful Jobs History Limit:</strong> {{cronjob.spec.successfulJobsHistoryLimit}}</p>
+    {% endif %}
+    {% if cronjob.spec.failedJobsHistoryLimit %}
+    <p><strong>Failed Jobs History Limit:</strong> {{cronjob.spec.failedJobsHistoryLimit}}</p>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Container Information -->
+<section>
+  <h3>Container Configuration</h3>
+  {% for container in cronjob.spec.jobTemplate.spec.template.spec.containers %}
+  <div style="border: 1px solid rgba(255,255,255,0.1); padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem;">
+    <h4>{{container.name}}</h4>
+    <p><strong>Image:</strong> <code>{{container.image}}</code></p>
+    {% if container.imagePullPolicy %}
+    <p><strong>Image Pull Policy:</strong> {{container.imagePullPolicy}}</p>
+    {% endif %}
+    {% if container.command %}
+    <p><strong>Command:</strong> <code>{{container.command | join(' ')}}</code></p>
+    {% endif %}
+    {% if container.args %}
+    <p><strong>Args:</strong> <code>{{container.args | join(' ')}}</code></p>
+    {% endif %}
+    {% if container.env %}
+    <p><strong>Environment Variables:</strong></p>
+    <ul>
+      {% for env in container.env %}
+      <li><code>{{env.name}}: {{env.value}}</code></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if container.resources %}
+    <p><strong>Resources:</strong></p>
+    {% if container.resources.requests %}
+    <p style="margin-left: 1rem;"><strong>Requests:</strong></p>
+    <ul style="margin-left: 2rem;">
+      {% for key, value in container.resources.requests.items() %}
+      <li><code>{{key}}: {{value}}</code></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if container.resources.limits %}
+    <p style="margin-left: 1rem;"><strong>Limits:</strong></p>
+    <ul style="margin-left: 2rem;">
+      {% for key, value in container.resources.limits.items() %}
+      <li><code>{{key}}: {{value}}</code></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<!-- Status Information -->
+{% if cronjob.status %}
+<section>
+  <h3>Status</h3>
+  {% if cronjob.status.lastScheduleTime %}
+  <p><strong>Last Scheduled:</strong> {{cronjob.status.lastScheduleTime}}</p>
+  {% endif %}
+  {% if cronjob.status.lastSuccessfulTime %}
+  <p><strong>Last Successful Run:</strong> {{cronjob.status.lastSuccessfulTime}}</p>
+  {% endif %}
+  {% if cronjob.status.active %}
+  <p><strong>Active Jobs:</strong> {{cronjob.status.active | length}}</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- YAML View -->
+<section>
+  <h3>YAML Configuration</h3>
+  <details>
+    <summary>View YAML</summary>
+    <pre style="background: rgba(0,0,0,0.1); padding: 1rem; border-radius: 0.5rem; overflow-x: auto;"><code>{{yaml}}</code></pre>
+  </details>
+</section>
+
+{% endblock %}

@@ -8,7 +8,14 @@ import config
 
 config.TEST = True
 
-from app import _validate_cronjob_yaml, verify_password, namespace_filter, _strip_immutable_fields, app, healthz
+from app import (
+    _validate_cronjob_yaml,
+    verify_password,
+    namespace_filter,
+    _strip_immutable_fields,
+    app,
+    healthz,
+)
 from unittest.mock import patch, MagicMock
 from flask import Flask
 
@@ -252,39 +259,39 @@ def test_verify_password_no_admin_password():
     """Test verify_password when no admin password is configured"""
     original_users = config.USERS
     config.USERS = {}
-    
+
     result = verify_password("any_user", "any_password")
     assert result == True
-    
+
     config.USERS = original_users
 
 
 def test_verify_password_valid_credentials():
     """Test verify_password with valid credentials"""
     from werkzeug.security import generate_password_hash
-    
+
     original_users = config.USERS
     config.USERS = {"testuser": generate_password_hash("testpass")}
-    
+
     result = verify_password("testuser", "testpass")
     assert result == "testuser"
-    
+
     config.USERS = original_users
 
 
 def test_verify_password_invalid_credentials():
     """Test verify_password with invalid credentials"""
     from werkzeug.security import generate_password_hash
-    
+
     original_users = config.USERS
     config.USERS = {"testuser": generate_password_hash("testpass")}
-    
+
     result = verify_password("testuser", "wrongpass")
     assert result == False
-    
+
     result = verify_password("wronguser", "testpass")
     assert result == False
-    
+
     config.USERS = original_users
 
 
@@ -293,14 +300,14 @@ def test_namespace_filter_no_restrictions():
     """Test namespace filter when no restrictions are configured"""
     original_allow = config.ALLOW_NAMESPACES
     config.ALLOW_NAMESPACES = None
-    
+
     @namespace_filter
     def test_func(namespace):
         return f"success_{namespace}"
-    
+
     result = test_func("any_namespace")
     assert result == "success_any_namespace"
-    
+
     config.ALLOW_NAMESPACES = original_allow
 
 
@@ -308,14 +315,14 @@ def test_namespace_filter_allowed_namespace():
     """Test namespace filter with allowed namespace"""
     original_allow = config.ALLOW_NAMESPACES
     config.ALLOW_NAMESPACES = "test,prod"
-    
+
     @namespace_filter
     def test_func(namespace):
         return f"success_{namespace}"
-    
+
     result = test_func("test")
     assert result == "success_test"
-    
+
     config.ALLOW_NAMESPACES = original_allow
 
 
@@ -323,20 +330,21 @@ def test_namespace_filter_denied_namespace():
     """Test namespace filter denial with restricted namespaces"""
     original_allow = config.ALLOW_NAMESPACES
     config.ALLOW_NAMESPACES = "prod"
-    
+
     # Create a simple Flask app for testing
     app = Flask(__name__)
-    with app.test_request_context('/', headers={'Content-Type': 'application/json'}):
+    with app.test_request_context("/", headers={"Content-Type": "application/json"}):
+
         @namespace_filter
         def test_func(namespace):
             return f"success_{namespace}"
-        
+
         # This should be denied and return a tuple with error
-        result = test_func("test") 
+        result = test_func("test")
         assert isinstance(result, tuple)
         assert result[1] == 403
         assert "denied" in result[0]["error"]
-    
+
     config.ALLOW_NAMESPACES = original_allow
 
 
@@ -351,19 +359,14 @@ def test_strip_immutable_fields():
             "uid": "abc-123",
             "generation": 1,
             "managedFields": [],
-            "labels": {"app": "test"}
+            "labels": {"app": "test"},
         },
-        "spec": {
-            "schedule": "0 0 * * *",
-            "successfulJobsHistoryLimit": 3
-        },
-        "status": {
-            "lastScheduleTime": "2024-01-01T00:00:00Z"
-        }
+        "spec": {"schedule": "0 0 * * *", "successfulJobsHistoryLimit": 3},
+        "status": {"lastScheduleTime": "2024-01-01T00:00:00Z"},
     }
-    
+
     result = _strip_immutable_fields(test_spec)
-    
+
     # Should keep name, namespace, labels, generation, managedFields but remove uid and resourceVersion
     assert result["metadata"]["name"] == "test"
     assert result["metadata"]["namespace"] == "default"
@@ -378,12 +381,8 @@ def test_strip_immutable_fields():
 
 def test_strip_immutable_fields_handles_missing_metadata():
     """Test _strip_immutable_fields handles missing metadata gracefully"""
-    test_spec = {
-        "spec": {
-            "schedule": "0 0 * * *"
-        }
-    }
-    
+    test_spec = {"spec": {"schedule": "0 0 * * *"}}
+
     result = _strip_immutable_fields(test_spec)
     assert "metadata" not in result or result["metadata"] == {}
 
@@ -436,43 +435,43 @@ def test_flask_app_creation():
     # Test that app instance exists and is configured
     assert app is not None
     assert app.name == "app"
-    
+
     # Test static configuration
     assert app.static_url_path == ""
     assert app.static_folder.endswith("static")
 
 
-@patch('app.get_cronjobs')
+@patch("app.get_cronjobs")
 def test_index_route_logic_namespace_only_true(mock_get_cronjobs):
     """Test index route logic when NAMESPACE_ONLY is True"""
     original_namespace_only = config.NAMESPACE_ONLY
-    original_kronic_namespace = getattr(config, 'KRONIC_NAMESPACE', None)
-    
+    original_kronic_namespace = getattr(config, "KRONIC_NAMESPACE", None)
+
     try:
         config.NAMESPACE_ONLY = True
         config.KRONIC_NAMESPACE = "test-namespace"
-        
+
         with app.test_client() as client:
             with app.test_request_context():
                 # Import the function to test its logic
                 from app import index
-                
+
                 # This should attempt to redirect, which we can't fully test without the server
                 # But we can test that the conditions are met
                 assert config.NAMESPACE_ONLY == True
                 assert config.KRONIC_NAMESPACE == "test-namespace"
-                
+
     finally:
         config.NAMESPACE_ONLY = original_namespace_only
         if original_kronic_namespace:
             config.KRONIC_NAMESPACE = original_kronic_namespace
 
 
-@patch('app.get_cronjobs')
+@patch("app.get_cronjobs")
 def test_index_route_logic_namespace_only_false(mock_get_cronjobs):
     """Test index route logic when NAMESPACE_ONLY is False"""
     original_namespace_only = config.NAMESPACE_ONLY
-    
+
     try:
         config.NAMESPACE_ONLY = False
         mock_get_cronjobs.return_value = [
@@ -480,26 +479,75 @@ def test_index_route_logic_namespace_only_false(mock_get_cronjobs):
             {"namespace": "default", "name": "job2"},
             {"namespace": "kube-system", "name": "job3"},
         ]
-        
+
         with app.test_client() as client:
             with app.test_request_context():
                 # Test the core logic of counting namespaces
                 cronjobs = mock_get_cronjobs()
                 namespaces = {}
                 for cronjob in cronjobs:
-                    namespaces[cronjob["namespace"]] = namespaces.get(cronjob["namespace"], 0) + 1
-                
+                    namespaces[cronjob["namespace"]] = (
+                        namespaces.get(cronjob["namespace"], 0) + 1
+                    )
+
                 expected = {"default": 2, "kube-system": 1}
                 assert namespaces == expected
-                
+
     finally:
         config.NAMESPACE_ONLY = original_namespace_only
+
+
+@patch("app.get_cronjob")
+def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
+    """Test the new details route with an existing cronjob"""
+    # Mock an existing cronjob
+    mock_cronjob = {
+        "apiVersion": "batch/v1",
+        "kind": "CronJob",
+        "metadata": {"name": "test-cronjob", "namespace": "default"},
+        "spec": {
+            "schedule": "*/5 * * * *",
+            "jobTemplate": {
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "containers": [{"name": "test", "image": "busybox"}],
+                            "restartPolicy": "OnFailure",
+                        }
+                    }
+                }
+            },
+        },
+    }
+
+    mock_get_cronjob.return_value = mock_cronjob
+
+    with app.test_client() as client:
+        # Test that the route exists and returns a 200 response
+        response = client.get("/namespaces/default/cronjobs/test-cronjob/details")
+        assert response.status_code == 200
+        # Check that it contains expected content
+        assert b"test-cronjob" in response.data
+        assert b"default" in response.data
+
+
+@patch("app.get_cronjob")
+def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
+    """Test the new details route with a non-existent cronjob"""
+    # Mock no cronjob found
+    mock_get_cronjob.return_value = None
+
+    with app.test_client() as client:
+        # Test that it redirects to the edit/create page
+        response = client.get("/namespaces/default/cronjobs/nonexistent/details")
+        assert response.status_code == 302
+        assert "/namespaces/default/cronjobs/nonexistent" in response.location
 
 
 def test_healthz_endpoint_with_client():
     """Test healthz endpoint through Flask test client"""
     with app.test_client() as client:
-        response = client.get('/healthz')
+        response = client.get("/healthz")
         assert response.status_code == 200
         assert response.get_json() == {"status": "ok"}
 
