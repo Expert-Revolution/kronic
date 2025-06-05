@@ -427,7 +427,16 @@ spec: "not_a_dict"
 def test_healthz_endpoint():
     """Test the healthz endpoint"""
     result = healthz()
-    assert result == {"status": "ok"}
+    # Should return tuple (data, status_code) or just data
+    if isinstance(result, tuple):
+        data, status_code = result
+        assert status_code == 200
+        assert data["status"] == "ok"
+        assert "components" in data
+        assert "database" in data["components"]
+    else:
+        # Backward compatibility - might return just data
+        assert result["status"] == "ok"
 
 
 def test_flask_app_creation():
@@ -549,7 +558,14 @@ def test_healthz_endpoint_with_client():
     with app.test_client() as client:
         response = client.get("/healthz")
         assert response.status_code == 200
-        assert response.get_json() == {"status": "ok"}
+        
+        data = response.get_json()
+        assert data["status"] == "ok"
+        assert "components" in data
+        assert "database" in data["components"]
+        
+        # In test mode, database should be disabled
+        assert data["components"]["database"]["status"] == "disabled"
 
 
 def test_validate_cronjob_yaml_jobtemplate_not_dict():
