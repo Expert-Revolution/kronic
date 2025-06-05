@@ -148,6 +148,50 @@ command: ["sh", "-c", "echo \\"hello world\\""]'''
             
             # But this alone isn't sufficient for Alpine.js expressions in HTML attributes
 
+    def test_json_parse_correctly_decodes_yaml(self):
+        """Test that JSON.parse() correctly decodes the JSON-encoded YAML string."""
+        with app.app_context():
+            from flask import render_template_string
+            import json
+            
+            # Complex Kubernetes YAML that would break Alpine.js if not handled correctly
+            k8s_yaml = '''apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "test-cronjob"
+  labels:
+    app: "test-app"
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: test-container
+            image: curlimages/curl:latest
+            command: ["curl", "-d", "{\\"key\\": \\"value\\"}"]'''
+
+            # Step 1: JSON-encode the YAML (what |tojson does)
+            json_encoded = json.dumps(k8s_yaml)
+            
+            # Step 2: Simulate what JSON.parse() does in JavaScript
+            decoded_yaml = json.loads(json_encoded)
+            
+            # Verify that we get back the original YAML string
+            self.assertEqual(k8s_yaml, decoded_yaml)
+            
+            # Verify the YAML contains the expected Kubernetes structure
+            self.assertIn('apiVersion: batch/v1', decoded_yaml)
+            self.assertIn('kind: CronJob', decoded_yaml)
+            self.assertIn('test-cronjob', decoded_yaml)
+            self.assertIn('*/5 * * * *', decoded_yaml)
+            
+            print(f"✓ JSON.parse() correctly decodes JSON-encoded YAML string")
+            print(f"✓ Original YAML length: {len(k8s_yaml)}")
+            print(f"✓ Decoded YAML length: {len(decoded_yaml)}")
+            print(f"✓ Are they identical? {k8s_yaml == decoded_yaml}")
+
 
 if __name__ == '__main__':
     unittest.main()

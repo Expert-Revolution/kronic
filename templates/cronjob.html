@@ -339,15 +339,20 @@ function cronEditor() {
     curlExample: '',
 
     initFromYaml(yamlStr) {
+      // Legacy method: directly receives a YAML string
       this.yamlContent = yamlStr;
       this.parseYamlToForm();
     },
 
     initFromDataYaml() {
-      // Get YAML content from data attribute
-      const yamlStr = this.$el.dataset.yaml;
-      if (yamlStr) {
-        this.yamlContent = JSON.parse(yamlStr);
+      // Get JSON-encoded YAML string from data attribute
+      // The template uses {{ yaml|tojson }} which JSON-encodes the YAML string for safe HTML embedding
+      const jsonEncodedYaml = this.$el.dataset.yaml;
+      if (jsonEncodedYaml) {
+        // JSON.parse() decodes the JSON-encoded string back to the original YAML string
+        // We're NOT parsing YAML as JSON - we're just undoing the JSON encoding
+        this.yamlContent = JSON.parse(jsonEncodedYaml);
+        // Now parseYamlToForm() will do the actual YAML parsing
         this.parseYamlToForm();
       }
     },
