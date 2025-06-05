@@ -10,7 +10,7 @@
 </article>
 {% endif %}
 
-<div x-data="cronEditor()" x-init="initFromYaml(`{{yaml|safe}}`)">
+<div x-data="cronEditor()" x-init="initFromYaml({{ yaml|tojson }})">
   <form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
     <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
     
