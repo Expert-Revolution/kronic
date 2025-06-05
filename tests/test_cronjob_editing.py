@@ -329,6 +329,125 @@ spec:
         
         return container_info
     
+    def test_container_command_extraction_fix(self):
+        """Test that command field is correctly extracted from YAML (addresses issue #81)"""
+        
+        sample_yaml = """apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-cronjob
+  namespace: default
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - command:
+            - curl
+            - -v
+            - http://example.com
+            image: curlimages/curl:latest
+            imagePullPolicy: IfNotPresent
+            name: curl-test
+          restartPolicy: OnFailure"""
+
+        # This simulates what the fixed parseYamlToForm() function should extract
+        lines = sample_yaml.split('\n')
+        container_info = self._extract_container_info_with_command_simulation(lines)
+        
+        # Verify all container fields are extracted correctly
+        self.assertEqual(container_info.get('name'), 'curl-test')
+        self.assertEqual(container_info.get('image'), 'curlimages/curl:latest')
+        self.assertEqual(container_info.get('command'), '["curl", "-v", "http://example.com"]')
+        
+    def _extract_container_info_with_command_simulation(self, lines):
+        """Simulate the FIXED container extraction logic that includes command parsing"""
+        container_info = {}
+        
+        # Find the containers section
+        containers_start = next((i for i, line in enumerate(lines) if line.strip() == 'containers:'), None)
+        if containers_start is None:
+            return container_info
+        
+        # Look for the first container
+        in_first_container = False
+        current_indent = None
+        in_command_section = False
+        command_items = []
+        command_base_indent = None
+        
+        for i in range(containers_start + 1, len(lines)):
+            line = lines[i]
+            stripped = line.strip()
+            
+            if stripped == '':
+                continue
+                
+            # Calculate indentation
+            indent = len(line) - len(line.lstrip())
+            
+            # Start of first container - handle both "- command:" and separate lines
+            if (stripped.startswith('- ') or stripped == '-') and not in_first_container:
+                in_first_container = True
+                current_indent = indent
+                
+                # Check if it's "- command:" on the same line
+                if stripped == '- command:':
+                    in_command_section = True
+                    command_base_indent = indent
+                    continue
+                elif ':' in stripped and stripped != '-':
+                    # Property on same line as dash
+                    prop_and_value = stripped[2:].strip()  # Remove "- "
+                    if ':' in prop_and_value:
+                        prop, value = prop_and_value.split(':', 1)
+                        prop = prop.strip()
+                        value = value.strip().replace("'", "").replace('"', '')
+                        if prop in ['name', 'image']:
+                            container_info[prop] = value
+                    continue
+                continue
+            
+            # If we're in the first container
+            if in_first_container:
+                # Check if we've moved to a new section (same or lower indent)
+                if indent <= current_indent and not stripped.startswith('-'):
+                    break
+                
+                # Check if we're starting the command section
+                if stripped == 'command:' and not in_command_section:
+                    in_command_section = True
+                    command_base_indent = indent
+                    continue
+                
+                # If we're in the command section, collect array items
+                if in_command_section:
+                    # If we've moved to a new property at the same or lower indent, stop collecting command
+                    if indent <= command_base_indent and not stripped.startswith('-'):
+                        in_command_section = False
+                        # Continue processing this line as a regular property
+                    elif stripped.startswith('- '):
+                        # Collect command array items
+                        command_item = stripped[2:].strip()  # Remove '- ' prefix
+                        command_items.append(command_item)
+                        continue
+                
+                # Extract container properties
+                if ':' in stripped and not stripped.startswith('-'):
+                    prop, value = stripped.split(':', 1)
+                    prop = prop.strip()
+                    value = value.strip().replace("'", "").replace('"', '')
+                    if prop in ['name', 'image']:
+                        container_info[prop] = value
+        
+        # Convert command items to JSON array string format
+        if command_items:
+            import json
+            container_info['command'] = json.dumps(command_items)
+        
+        return container_info
+    
     def _extract_node_selectors_simulation(self, lines):
         """Simulate the fixed nodeSelector extraction logic from the template"""
         node_selectors = []

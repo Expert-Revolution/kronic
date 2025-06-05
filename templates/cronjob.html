@@ -446,6 +446,9 @@ function cronEditor() {
         if (containersStartIndex !== -1) {
           let inFirstContainer = false;
           let currentIndent = null;
+          let inCommandSection = false;
+          let commandItems = [];
+          let commandBaseIndent = null;
           
           for (let i = containersStartIndex + 1; i < lines.length; i++) {
             const line = lines[i];
@@ -456,10 +459,29 @@ function cronEditor() {
             // Calculate indentation
             const indent = line.length - line.replace(/^\s*/, '').length;
             
-            // Start of first container
-            if (stripped.startsWith('- ') && !inFirstContainer) {
+            // Start of first container - handle both "- command:" and separate "- " then "command:"
+            if ((stripped.startsWith('- ') || stripped === '-') && !inFirstContainer) {
               inFirstContainer = true;
               currentIndent = indent;
+              
+              // Check if it's "- command:" on the same line
+              if (stripped === '- command:') {
+                inCommandSection = true;
+                commandBaseIndent = indent;
+                continue;
+              } else if (stripped.includes(':') && stripped !== '-') {
+                // This is a property on the same line as the dash, like "- name: value"
+                const propAndValue = stripped.substring(2).trim(); // Remove "- "
+                if (propAndValue.includes(':')) {
+                  const [prop, value] = propAndValue.split(':').map(s => s.trim());
+                  if (prop === 'name') {
+                    this.container.name = value.replace(/['"]/g, '');
+                  } else if (prop === 'image') {
+                    this.container.image = value.replace(/['"]/g, '');
+                  }
+                }
+                continue;
+              }
               continue;
             }
             
@@ -468,6 +490,27 @@ function cronEditor() {
               // Check if we've moved to a new section (same or lower indent)
               if (indent <= currentIndent && !stripped.startsWith('-')) {
                 break;
+              }
+              
+              // Check if we're starting the command section
+              if (stripped === 'command:' && !inCommandSection) {
+                inCommandSection = true;
+                commandBaseIndent = indent;
+                continue;
+              }
+              
+              // If we're in the command section, collect array items
+              if (inCommandSection) {
+                // If we've moved to a new property at the same or lower indent, stop collecting command
+                if (indent <= commandBaseIndent && !stripped.startsWith('-')) {
+                  inCommandSection = false;
+                  // Continue processing this line as a regular property
+                } else if (stripped.startsWith('- ')) {
+                  // Collect command array items
+                  const commandItem = stripped.substring(2).trim(); // Remove '- ' prefix
+                  commandItems.push(commandItem);
+                  continue;
+                }
               }
               
               // Extract container properties
@@ -480,6 +523,11 @@ function cronEditor() {
                 }
               }
             }
+          }
+          
+          // Convert command items to JSON array string format
+          if (commandItems.length > 0) {
+            this.container.command = JSON.stringify(commandItems);
           }
         }
         
