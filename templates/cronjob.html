@@ -274,7 +274,7 @@
     <!-- YAML Editor -->
     <div x-show="editorMode === 'yaml'" style="display: none;">
       <label for="yaml">Cronjob YAML:</label>
-      <textarea rows="{{ yaml.count('\n') + 7 }}" id="yaml" name="yaml" x-model="yamlContent" @input="syncFromYaml()">{{yaml}}</textarea>
+      <textarea rows="{{ yaml.count('\n') + 7 }}" id="yaml" name="yaml" x-model="yamlContent" @input="syncFromYaml()"></textarea>
     </div>
 
     <input type="submit" value="Submit">
@@ -368,15 +368,46 @@ function cronEditor() {
           }
         }
         
-        // Extract container info
-        const imageLine = lines.find(line => line.trim().startsWith('image:'));
-        if (imageLine) {
-          this.container.image = imageLine.split(':')[1].trim().replace(/['"]/g, '');
-        }
-        
-        const nameLine2 = lines.find(line => line.trim().startsWith('- name:'));
-        if (nameLine2) {
-          this.container.name = nameLine2.split(':')[1].trim().replace(/['"]/g, '');
+        // Extract container info from the first container in the containers section
+        const containersStartIndex = lines.findIndex(line => line.trim() === 'containers:');
+        if (containersStartIndex !== -1) {
+          let inFirstContainer = false;
+          let currentIndent = null;
+          
+          for (let i = containersStartIndex + 1; i < lines.length; i++) {
+            const line = lines[i];
+            const stripped = line.trim();
+            
+            if (stripped === '') continue;
+            
+            // Calculate indentation
+            const indent = line.length - line.replace(/^\s*/, '').length;
+            
+            // Start of first container
+            if (stripped.startsWith('- ') && !inFirstContainer) {
+              inFirstContainer = true;
+              currentIndent = indent;
+              continue;
+            }
+            
+            // If we're in the first container
+            if (inFirstContainer) {
+              // Check if we've moved to a new section (same or lower indent)
+              if (indent <= currentIndent && !stripped.startsWith('-')) {
+                break;
+              }
+              
+              // Extract container properties
+              if (stripped.includes(':') && !stripped.startsWith('-')) {
+                const [prop, value] = stripped.split(':').map(s => s.trim());
+                if (prop === 'name') {
+                  this.container.name = value.replace(/['"]/g, '');
+                } else if (prop === 'image') {
+                  this.container.image = value.replace(/['"]/g, '');
+                }
+              }
+            }
+          }
         }
         
         // Extract suspend
@@ -385,17 +416,31 @@ function cronEditor() {
           this.cronJobSuspend = suspendLine.split(':')[1].trim().replace(/['"]/g, '');
         }
 
-        // Parse nodeSelector
+        // Parse nodeSelector with improved boundary detection
         const nodeSelectorStartIndex = lines.findIndex(line => line.trim() === 'nodeSelector:');
         if (nodeSelectorStartIndex !== -1) {
+          const baseIndent = lines[nodeSelectorStartIndex].length - lines[nodeSelectorStartIndex].replace(/^\s*/, '').length;
+          
           for (let i = nodeSelectorStartIndex + 1; i < lines.length; i++) {
             const line = lines[i];
-            if (line.trim() === '' || line.match(/^\s*(tolerations|affinity|containers):/)) break;
-            if (line.includes(':') && !line.trim().startsWith('#')) {
-              const [key, value] = line.split(':').map(s => s.trim());
-              if (key && value && !key.startsWith(' ') === false) {
+            const stripped = line.trim();
+            
+            if (stripped === '') continue;
+            
+            // Calculate indentation
+            const indent = line.length - line.replace(/^\s*/, '').length;
+            
+            // If we've moved to a section at the same or lower indent level, stop
+            if (indent <= baseIndent) {
+              break;
+            }
+            
+            // Extract key-value pairs
+            if (stripped.includes(':')) {
+              const [key, value] = stripped.split(':').map(s => s.trim());
+              if (key && value) {
                 this.nodeSelector.push({ 
-                  key: key.replace(/^\s+/, ''), 
+                  key: key, 
                   value: value.replace(/['"]/g, '') 
                 });
               }
