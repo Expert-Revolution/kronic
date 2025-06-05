@@ -448,6 +448,83 @@ spec:
         
         return container_info
     
+    def test_image_tag_preservation_fix(self):
+        """Test that image field preserves tags correctly (addresses issue #81)"""
+        
+        sample_yaml = """apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-cronjob
+  namespace: default
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - command:
+            - curl
+            - -v
+            - http://example.com
+            image: curlimages/curl:8.5.0
+            imagePullPolicy: IfNotPresent
+            name: curl-test
+          restartPolicy: OnFailure"""
+
+        # This simulates what the fixed parseYamlToForm() function should extract
+        lines = sample_yaml.split('\n')
+        container_info = self._extract_container_info_with_fixed_colon_handling(lines)
+        
+        # Verify image field preserves the tag
+        self.assertEqual(container_info.get('name'), 'curl-test')
+        self.assertEqual(container_info.get('image'), 'curlimages/curl:8.5.0')  # Tag should be preserved
+        
+    def _extract_container_info_with_fixed_colon_handling(self, lines):
+        """Simulate container extraction with fixed colon handling for image tags"""
+        container_info = {}
+        
+        # Find the containers section
+        containers_start = next((i for i, line in enumerate(lines) if line.strip() == 'containers:'), None)
+        if containers_start is None:
+            return container_info
+        
+        # Look for the first container
+        in_first_container = False
+        current_indent = None
+        
+        for i in range(containers_start + 1, len(lines)):
+            line = lines[i]
+            stripped = line.strip()
+            
+            if stripped == '':
+                continue
+                
+            # Calculate indentation
+            indent = len(line) - len(line.lstrip())
+            
+            # Start of first container 
+            if stripped.startswith('- ') and not in_first_container:
+                in_first_container = True
+                current_indent = indent
+                continue
+            
+            # If we're in the first container
+            if in_first_container:
+                # Check if we've moved to a new section (same or lower indent)
+                if indent <= current_indent and not stripped.startswith('-'):
+                    break
+                    
+                # Extract container properties - FIXED to handle colons in values
+                if ':' in stripped and not stripped.startswith('-'):
+                    # Use indexOf to split only on first colon (preserves image tags)
+                    colon_index = stripped.find(':')
+                    prop = stripped[:colon_index].strip()
+                    value = stripped[colon_index + 1:].strip().replace("'", "").replace('"', '')
+                    if prop in ['name', 'image']:
+                        container_info[prop] = value
+        
+        return container_info
+    
     def _extract_node_selectors_simulation(self, lines):
         """Simulate the fixed nodeSelector extraction logic from the template"""
         node_selectors = []

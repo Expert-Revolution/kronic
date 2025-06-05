@@ -473,7 +473,9 @@ function cronEditor() {
                 // This is a property on the same line as the dash, like "- name: value"
                 const propAndValue = stripped.substring(2).trim(); // Remove "- "
                 if (propAndValue.includes(':')) {
-                  const [prop, value] = propAndValue.split(':').map(s => s.trim());
+                  const colonIndex = propAndValue.indexOf(':');
+                  const prop = propAndValue.substring(0, colonIndex).trim();
+                  const value = propAndValue.substring(colonIndex + 1).trim();
                   if (prop === 'name') {
                     this.container.name = value.replace(/['"]/g, '');
                   } else if (prop === 'image') {
@@ -515,7 +517,9 @@ function cronEditor() {
               
               // Extract container properties
               if (stripped.includes(':') && !stripped.startsWith('-')) {
-                const [prop, value] = stripped.split(':').map(s => s.trim());
+                const colonIndex = stripped.indexOf(':');
+                const prop = stripped.substring(0, colonIndex).trim();
+                const value = stripped.substring(colonIndex + 1).trim();
                 if (prop === 'name') {
                   this.container.name = value.replace(/['"]/g, '');
                 } else if (prop === 'image') {
@@ -558,7 +562,9 @@ function cronEditor() {
             
             // Extract key-value pairs
             if (stripped.includes(':')) {
-              const [key, value] = stripped.split(':').map(s => s.trim());
+              const colonIndex = stripped.indexOf(':');
+              const key = stripped.substring(0, colonIndex).trim();
+              const value = stripped.substring(colonIndex + 1).trim();
               if (key && value) {
                 this.nodeSelector.push({ 
                   key: key, 
@@ -596,15 +602,15 @@ function cronEditor() {
                 if (keyMatch) currentToleration.key = keyMatch[1];
               }
             } else if (currentToleration && line.includes(':')) {
-              const [prop, value] = line.split(':').map(s => s.trim());
-              const cleanProp = prop.replace(/^\s+/, '');
-              const cleanValue = value.replace(/['"]/g, '');
+              const colonIndex = line.indexOf(':');
+              const prop = line.substring(0, colonIndex).trim().replace(/^\s+/, '');
+              const value = line.substring(colonIndex + 1).trim().replace(/['"]/g, '');
               
-              if (cleanProp === 'key') currentToleration.key = cleanValue;
-              else if (cleanProp === 'operator') currentToleration.operator = cleanValue;
-              else if (cleanProp === 'value') currentToleration.value = cleanValue;
-              else if (cleanProp === 'effect') currentToleration.effect = cleanValue;
-              else if (cleanProp === 'tolerationSeconds') currentToleration.tolerationSeconds = cleanValue;
+              if (prop === 'key') currentToleration.key = value;
+              else if (prop === 'operator') currentToleration.operator = value;
+              else if (prop === 'value') currentToleration.value = value;
+              else if (prop === 'effect') currentToleration.effect = value;
+              else if (prop === 'tolerationSeconds') currentToleration.tolerationSeconds = value;
             }
           }
           if (currentToleration) {
