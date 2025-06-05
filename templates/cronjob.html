@@ -146,11 +146,10 @@
           <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" @click="formatJson()" style="background-color: #007bff;">Format JSON (Pretty)</button>
             <button type="button" @click="formatJsonForCurl()" style="background-color: #28a745;">Format for Terminal Curl</button>
-            <button type="button" @click="formatJsonForK8s()" style="background-color: #fd7e14;">Format for K8s YAML</button>
             <button type="button" @click="showCurlExample()" style="background-color: #6c757d;">Show Examples</button>
           </div>
           <p style="font-size: 0.8em; color: #888; margin-top: 0.5rem;">
-            <strong>Tip:</strong> Use "Format for K8s YAML" for Kubernetes command arrays, or "Format for Terminal Curl" for direct terminal usage.
+            <strong>Tip:</strong> Use "Format for Terminal Curl" for direct terminal usage.
           </p>
           
           <!-- Curl Example Display -->
@@ -751,9 +750,39 @@ spec:
         // Format JSON as a single line for curl -d parameter
         const compactJson = JSON.stringify(parsed);
         this.jsonData = compactJson;
-        this.updateCommandWithJson();
+        
+        // Generate terminal curl command and replace the entire command
+        this.generateTerminalCurlCommand();
       } catch (e) {
         alert('Invalid JSON format. Please check your syntax.');
+      }
+    },
+
+    generateTerminalCurlCommand() {
+      try {
+        const parsed = JSON.parse(this.jsonData);
+        const compactJson = JSON.stringify(parsed);
+        
+        // Extract endpoint from existing command if available
+        let endpoint = 'https://example.com/api/endpoint';
+        const commandStr = this.container.command;
+        
+        // Try to extract URL from the existing command
+        const urlMatch = commandStr.match(/"([^"]*:\/\/[^"]*|https?:\/\/[^"]*)"/) || 
+                       commandStr.match(/'([^']*:\/\/[^']*|https?:\/\/[^']*)'/) ||
+                       commandStr.match(/([a-zA-Z]+:\/\/[^\s"']+)/);
+        if (urlMatch) {
+          endpoint = urlMatch[1];
+        }
+        
+        // Generate terminal curl command - REPLACE the entire command field
+        const terminalCurlCommand = `curl -v -X POST "${endpoint}" -d '${compactJson}'`;
+        this.container.command = terminalCurlCommand;
+        
+        this.updateYaml();
+      } catch (e) {
+        // If JSON is invalid, don't modify the command
+        console.warn('Cannot generate curl command with invalid JSON');
       }
     },
 
