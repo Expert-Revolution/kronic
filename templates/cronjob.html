@@ -140,10 +140,24 @@
         <!-- JSON Helper for -d parameter -->
         <div x-show="container.command.includes('-d')" style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4>JSON Data Helper</h4>
-          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Enter JSON data for the -d parameter. This will help format your JSON correctly.</p>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Enter JSON data for the -d parameter. This will help format your JSON correctly for curl commands.</p>
           <label for="json-helper">JSON Data:</label>
           <textarea id="json-helper" x-model="jsonData" @input="updateCommandWithJson()" rows="4" placeholder='{"accessToken": "string", "username": "RPA", "userId": "0"}'></textarea>
-          <button type="button" @click="formatJson()" style="margin-top: 0.5rem;">Format JSON</button>
+          <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+            <button type="button" @click="formatJson()" style="background-color: #007bff;">Format JSON (Pretty)</button>
+            <button type="button" @click="formatJsonForCurl()" style="background-color: #28a745;">Format for Curl</button>
+            <button type="button" @click="showCurlExample()" style="background-color: #6c757d;">Show Curl Example</button>
+          </div>
+          <p style="font-size: 0.8em; color: #888; margin-top: 0.5rem;">
+            <strong>Tip:</strong> Use "Format for Curl" to create a single-line JSON that's ready to copy-paste into curl commands.
+          </p>
+          
+          <!-- Curl Example Display -->
+          <div x-show="curlExample" x-transition style="margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+            <h5 style="margin-top: 0; color: #495057;">Copy-Ready Curl Command:</h5>
+            <code style="display: block; padding: 0.5rem; background: #e9ecef; border-radius: 0.25rem; white-space: pre-wrap; word-break: break-all;" x-text="curlExample"></code>
+            <button type="button" @click="copyCurlExample()" style="margin-top: 0.5rem; background-color: #007bff;">Copy to Clipboard</button>
+          </div>
         </div>
         
         <div class="grid">
@@ -298,7 +312,7 @@ function cronEditor() {
     container: {
       name: 'curl-{name-placeholder}',
       image: 'curlimages/curl:latest',
-      command: '["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", "{\\"accessToken\\": \\"string\\", \\"username\\": \\"RPA\\", \\"userId\\": \\"0\\"}"]',
+      command: '["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", \'{"accessToken": "string", "username": "RPA", "userId": "0"}\']',
       restartPolicy: 'Never'
     },
     nodeSelector: [
@@ -321,6 +335,7 @@ function cronEditor() {
     },
     yamlContent: '',
     jsonData: '{"accessToken": "string", "username": "RPA", "userId": "0"}',
+    curlExample: '',
 
     initFromYaml(yamlStr) {
       this.yamlContent = yamlStr;
@@ -672,9 +687,86 @@ spec:
       }
     },
 
+    formatJsonForCurl() {
+      try {
+        const parsed = JSON.parse(this.jsonData);
+        // Format JSON as a single line for curl -d parameter
+        const compactJson = JSON.stringify(parsed);
+        this.jsonData = compactJson;
+        this.updateCommandWithJson();
+      } catch (e) {
+        alert('Invalid JSON format. Please check your syntax.');
+      }
+    },
+
     updateCommandWithJson() {
-      // Update the command when JSON data changes
+      if (this.jsonData && this.container.command.includes('-d')) {
+        try {
+          // Parse and escape the JSON properly for curl command
+          const parsed = JSON.parse(this.jsonData);
+          const compactJson = JSON.stringify(parsed);
+          
+          // Update the command to use the formatted JSON
+          let updatedCommand = this.container.command;
+          
+          // Replace the JSON part in the -d parameter
+          const dParamRegex = /"-d",\s*"[^"]*"/g;
+          const replacement = `"-d", '${compactJson}'`;
+          
+          if (updatedCommand.match(dParamRegex)) {
+            updatedCommand = updatedCommand.replace(dParamRegex, replacement);
+          } else {
+            // If no -d parameter exists, we don't modify the command
+          }
+          
+          this.container.command = updatedCommand;
+        } catch (e) {
+          // If JSON is invalid, just update YAML without modifying command
+        }
+      }
       this.updateYaml();
+    },
+
+    showCurlExample() {
+      try {
+        const parsed = JSON.parse(this.jsonData);
+        const compactJson = JSON.stringify(parsed);
+        
+        // Extract endpoint from command if available
+        const commandStr = this.container.command;
+        let endpoint = '{endpoint-placeholder}';
+        
+        // Try to extract URL from the command
+        const urlMatch = commandStr.match(/"([^"]*:\/\/[^"]*|https?:\/\/[^"]*)"/) || 
+                       commandStr.match(/'([^']*:\/\/[^']*|https?:\/\/[^']*)'/) ||
+                       commandStr.match(/([a-zA-Z]+:\/\/[^\s"']+)/);
+        if (urlMatch) {
+          endpoint = urlMatch[1];
+        }
+        
+        // Generate curl command ready for copy-paste
+        this.curlExample = `curl -v -X POST "${endpoint}" -d '${compactJson}'`;
+      } catch (e) {
+        this.curlExample = `curl -v -X POST "{endpoint-placeholder}" -d '${this.jsonData || "{\"key\": \"value\"}"}'`;
+      }
+    },
+
+    copyCurlExample() {
+      if (navigator.clipboard && this.curlExample) {
+        navigator.clipboard.writeText(this.curlExample).then(() => {
+          alert('Curl command copied to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy: ', err);
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = this.curlExample;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          alert('Curl command copied to clipboard!');
+        });
+      }
     }
   }
 }

@@ -94,9 +94,20 @@
         <th>
           <div role="button"
             @click="cloneJobName = prompt('New CronJob Name:', '{{cronjob.metadata.name}}');
-              let data = JSON.stringify({name: cloneJobName});
-              console.log(data);
-              apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'clone', 'POST', data, false)
+              if (cloneJobName) {
+                let jsonData = {name: cloneJobName};
+                let data = JSON.stringify(jsonData);
+                
+                // Show curl command to user with copy functionality
+                showCurlCommand(
+                  `/api/namespaces/{{namespace}}/cronjobs/{{cronjob.metadata.name}}/clone`, 
+                  jsonData, 
+                  'POST', 
+                  `Clone CronJob '{{cronjob.metadata.name}}' to '${cloneJobName}'`
+                );
+                
+                // Execute the API call
+                apiClient('{{namespace}}', 'cronjobs', '{{cronjob.metadata.name}}', 'clone', 'POST', data, false)
               .then(response => {
                 window.location.href = `/namespaces/{{namespace}}/cronjobs/${cloneJobName}`;
               })
@@ -178,6 +189,85 @@
 </div>
 {% endfor %}
 <script>
+  // Helper function to format JSON for curl -d parameter
+  function formatJsonForCurl(jsonObject) {
+    const jsonString = JSON.stringify(jsonObject);
+    // Escape double quotes for use within double quotes in curl
+    const escapedJson = jsonString.replace(/"/g, '\\"');
+    return `"${escapedJson}"`;
+  }
+
+  // Helper function to format JSON for curl with single quotes (cleaner option)
+  function formatJsonForCurlSingleQuotes(jsonObject) {
+    return `'${JSON.stringify(jsonObject)}'`;
+  }
+
+  // Helper function to format JSON with pretty printing for curl
+  function formatJsonForCurlPretty(jsonObject) {
+    const prettyJson = JSON.stringify(jsonObject, null, 2);
+    return `'${prettyJson}'`;
+  }
+
+  // Helper function to show curl examples for various API endpoints
+  function showApiExamples(namespace, cronjobName) {
+    const baseUrl = window.location.origin;
+    const examples = [
+      {
+        title: 'Clone CronJob',
+        method: 'POST',
+        endpoint: `/api/namespaces/${namespace}/cronjobs/${cronjobName}/clone`,
+        data: {name: 'new-cronjob-name'},
+        description: 'Clone an existing CronJob with a new name'
+      },
+      {
+        title: 'Trigger CronJob',
+        method: 'POST', 
+        endpoint: `/api/namespaces/${namespace}/cronjobs/${cronjobName}/trigger`,
+        data: null,
+        description: 'Manually trigger a CronJob execution'
+      },
+      {
+        title: 'Suspend CronJob',
+        method: 'POST',
+        endpoint: `/api/namespaces/${namespace}/cronjobs/${cronjobName}/suspend`,
+        data: null,
+        description: 'Suspend a CronJob (prevent future executions)'
+      },
+      {
+        title: 'Delete CronJob',
+        method: 'POST',
+        endpoint: `/api/namespaces/${namespace}/cronjobs/${cronjobName}/delete`,
+        data: null,
+        description: 'Delete a CronJob'
+      },
+      {
+        title: 'Get CronJob',
+        method: 'GET',
+        endpoint: `/api/namespaces/${namespace}/cronjobs/${cronjobName}`,
+        data: null,
+        description: 'Get details of a specific CronJob'
+      }
+    ];
+
+    let message = `API Examples for CronJob '${cronjobName}' in namespace '${namespace}':\n\n`;
+    
+    examples.forEach(example => {
+      message += `${example.title}:\n`;
+      message += `${example.description}\n`;
+      
+      if (example.data) {
+        const jsonFormatted = formatJsonForCurlSingleQuotes(example.data);
+        message += `curl -X ${example.method} -H "Content-Type: application/json" -d ${jsonFormatted} "${baseUrl}${example.endpoint}"\n`;
+        message += `JSON data: ${jsonFormatted}\n`;
+      } else {
+        message += `curl -X ${example.method} "${baseUrl}${example.endpoint}"\n`;
+      }
+      message += '\n';
+    });
+
+    alert(message);
+  }
+
   function fetchLogs() {
     return {
       isLoading: false,

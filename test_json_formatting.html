@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Formatting Test</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <div x-data="jsonTest()">
+        <h2>JSON Formatting Test</h2>
+        
+        <label>JSON Data:</label>
+        <textarea x-model="jsonData" rows="4" cols="50"></textarea><br><br>
+        
+        <button @click="formatJsonForCurl()">Format for Curl</button>
+        <button @click="showCurlExample()">Show Curl Example</button><br><br>
+        
+        <div x-show="curlExample">
+            <h3>Curl Command:</h3>
+            <code x-text="curlExample" style="display: block; background: #f0f0f0; padding: 10px; white-space: pre-wrap;"></code>
+            <button @click="copyCurlExample()">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        function jsonTest() {
+            return {
+                jsonData: '{"accessToken": "string", "username": "RPA", "userId": "0"}',
+                curlExample: '',
+                
+                formatJsonForCurl() {
+                    try {
+                        const parsed = JSON.parse(this.jsonData);
+                        const compactJson = JSON.stringify(parsed);
+                        this.jsonData = compactJson;
+                    } catch (e) {
+                        alert('Invalid JSON format. Please check your syntax.');
+                    }
+                },
+                
+                showCurlExample() {
+                    try {
+                        const parsed = JSON.parse(this.jsonData);
+                        const compactJson = JSON.stringify(parsed);
+                        this.curlExample = `curl -v -X POST "https://example.com/api/endpoint" -d '${compactJson}'`;
+                    } catch (e) {
+                        this.curlExample = `curl -v -X POST "https://example.com/api/endpoint" -d '${this.jsonData || "{\"key\": \"value\"}"}'`;
+                    }
+                },
+                
+                copyCurlExample() {
+                    if (navigator.clipboard && this.curlExample) {
+                        navigator.clipboard.writeText(this.curlExample).then(() => {
+                            alert('Curl command copied to clipboard!');
+                        }).catch(err => {
+                            console.error('Failed to copy: ', err);
+                            const textArea = document.createElement('textarea');
+                            textArea.value = this.curlExample;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            alert('Curl command copied to clipboard!');
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
