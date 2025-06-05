@@ -1,21 +1,21 @@
 services:
   kronic:
-    image: ghcr.io/mshade/kronic
     build:
       context: .
       target: dev
     environment:
-      KRONIC_ALLOW_NAMESPACES: "test"
+      KRONIC_ALLOW_NAMESPACES: ""
       KRONIC_ADMIN_PASSWORD: "test2"
       KUBECONFIG: "/home/kronic/.kube/config"
     volumes:
       - .:/app
-      - $HOME/.kube/kronic-localdev-container.yaml:/home/kronic/.kube/config
+      # Mount the entire .kube directory for proper kubernetes configuration
+      - $HOME/.kube:/home/kronic/.kube
     ports:
-      - 5000:5000
-    networks:
-      - k3d-kronic-localdev
+      - 5001:5000
+    # networks:
+    #   - k3d-kronic-localdev
 
-networks:
-  k3d-kronic-localdev:
-    external: true
+# networks:
+#   k3d-kronic-localdev:
+#     external: true
