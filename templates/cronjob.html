@@ -10,10 +10,632 @@
 </article>
 {% endif %}
 
-<form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
-  <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
-  <label for="yaml">Cronjob YAML:</label>
-  <textarea rows="{{ yaml.count('\n') + 7 }}" id="yaml" name="yaml">{{yaml}}</textarea>
-  <input type="submit" value="Submit">
-</form>
+<div x-data="cronEditor()" x-init="initFromYaml({{ yaml|tojson }})">
+  <form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
+    <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
+    
+    <!-- Editor Mode Toggle -->
+    <div style="margin-bottom: 2rem;">
+      <button type="button" @click="editorMode = 'visual'" :class="{'contrast': editorMode === 'visual'}">Visual Editor</button>
+      <button type="button" @click="editorMode = 'yaml'" :class="{'contrast': editorMode === 'yaml'}">YAML Editor</button>
+    </div>
+
+    <!-- Visual Editor -->
+    <div x-show="editorMode === 'visual'" style="display: none;">
+      <div class="grid">
+        <!-- Basic Information -->
+        <section>
+          <h3>Basic Information</h3>
+          <label for="cronjob-name">Name:</label>
+          <input type="text" id="cronjob-name" x-model="cronJobName" @input="updateYaml()" placeholder="my-cronjob">
+          
+          <label for="cronjob-namespace">Namespace:</label>
+          <input type="text" id="cronjob-namespace" x-model="cronJobNamespace" @input="updateYaml()" placeholder="default">
+        </section>
+
+        <!-- Schedule Configuration -->
+        <section>
+          <h3>Schedule Configuration</h3>
+          <div class="grid">
+            <div>
+              <label for="minute">Minute (0-59)</label>
+              <select id="minute" x-model="schedule.minute" @change="updateYaml()">
+                <option value="*">Every minute (*)</option>
+                <template x-for="i in 60" :key="i-1">
+                  <option :value="i-1" x-text="i-1"></option>
+                </template>
+                <option value="*/5">Every 5 minutes (*/5)</option>
+                <option value="*/10">Every 10 minutes (*/10)</option>
+                <option value="*/15">Every 15 minutes (*/15)</option>
+                <option value="*/30">Every 30 minutes (*/30)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label for="hour">Hour (0-23)</label>
+              <select id="hour" x-model="schedule.hour" @change="updateYaml()">
+                <option value="*">Every hour (*)</option>
+                <template x-for="i in 24" :key="i-1">
+                  <option :value="i-1" x-text="i-1"></option>
+                </template>
+                <option value="*/2">Every 2 hours (*/2)</option>
+                <option value="*/4">Every 4 hours (*/4)</option>
+                <option value="*/6">Every 6 hours (*/6)</option>
+                <option value="*/12">Every 12 hours (*/12)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label for="day">Day of Month (1-31)</label>
+              <select id="day" x-model="schedule.day" @change="updateYaml()">
+                <option value="*">Every day (*)</option>
+                <template x-for="i in 31" :key="i">
+                  <option :value="i" x-text="i"></option>
+                </template>
+              </select>
+            </div>
+            
+            <div>
+              <label for="month">Month (1-12)</label>
+              <select id="month" x-model="schedule.month" @change="updateYaml()">
+                <option value="*">Every month (*)</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+            
+            <div>
+              <label for="weekday">Day of Week (0-7)</label>
+              <select id="weekday" x-model="schedule.weekday" @change="updateYaml()">
+                <option value="*">Every day (*)</option>
+                <option value="0">Sunday</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday (alt)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style="margin-top: 1rem;">
+            <strong>Current Cron Expression: </strong>
+            <code x-text="getCurrentCronExpression()"></code>
+          </div>
+          <div style="margin-top: 0.5rem; color: #666;">
+            <small x-text="getCronDescription()"></small>
+          </div>
+        </section>
+      </div>
+
+      <!-- Container Configuration -->
+      <section style="margin-top: 2rem;">
+        <h3>Container Configuration</h3>
+        <div class="grid">
+          <div>
+            <label for="container-name">Container Name:</label>
+            <input type="text" id="container-name" x-model="container.name" @input="updateYaml()" placeholder="my-container">
+          </div>
+          <div>
+            <label for="container-image">Image:</label>
+            <input type="text" id="container-image" x-model="container.image" @input="updateYaml()" placeholder="busybox:latest">
+          </div>
+        </div>
+        
+        <label for="container-command">Command:</label>
+        <textarea id="container-command" x-model="container.command" @input="updateYaml()" rows="3" placeholder='["/bin/sh", "-c", "echo hello world"]'></textarea>
+        
+        <div class="grid">
+          <div>
+            <label for="restart-policy">Restart Policy:</label>
+            <select id="restart-policy" x-model="container.restartPolicy" @change="updateYaml()">
+              <option value="Never">Never</option>
+              <option value="OnFailure">OnFailure</option>
+              <option value="Always">Always</option>
+            </select>
+          </div>
+          <div>
+            <label for="suspend">Suspend:</label>
+            <select id="suspend" x-model="cronJobSuspend" @change="updateYaml()">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Kubernetes Scheduling -->
+      <section style="margin-top: 2rem;">
+        <h3>Kubernetes Scheduling</h3>
+        
+        <!-- Node Selector -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4>Node Selector</h4>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Select nodes with specific labels</p>
+          <div x-show="nodeSelector.length === 0">
+            <p style="color: #888; font-style: italic;">No node selector rules defined</p>
+          </div>
+          <template x-for="(selector, index) in nodeSelector" :key="index">
+            <div class="grid" style="margin-bottom: 0.5rem; align-items: end;">
+              <div>
+                <label>Key:</label>
+                <input type="text" x-model="selector.key" @input="updateYaml()" placeholder="kubernetes.io/arch">
+              </div>
+              <div>
+                <label>Value:</label>
+                <input type="text" x-model="selector.value" @input="updateYaml()" placeholder="amd64">
+              </div>
+              <div>
+                <button type="button" @click="removeNodeSelector(index)" style="background-color: #dc3545; color: white;">Remove</button>
+              </div>
+            </div>
+          </template>
+          <button type="button" @click="addNodeSelector()" style="margin-top: 0.5rem;">Add Node Selector</button>
+        </div>
+
+        <!-- Tolerations -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4>Tolerations</h4>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Allow scheduling on nodes with matching taints</p>
+          <div x-show="tolerations.length === 0">
+            <p style="color: #888; font-style: italic;">No tolerations defined</p>
+          </div>
+          <template x-for="(toleration, index) in tolerations" :key="index">
+            <div style="border: 1px solid rgba(255,255,255,0.1); padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem;">
+              <div class="grid">
+                <div>
+                  <label>Key:</label>
+                  <input type="text" x-model="toleration.key" @input="updateYaml()" placeholder="dedicated">
+                </div>
+                <div>
+                  <label>Operator:</label>
+                  <select x-model="toleration.operator" @change="updateYaml()">
+                    <option value="Equal">Equal</option>
+                    <option value="Exists">Exists</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Value:</label>
+                  <input type="text" x-model="toleration.value" @input="updateYaml()" placeholder="gpu" :disabled="toleration.operator === 'Exists'">
+                </div>
+              </div>
+              <div class="grid" style="margin-top: 0.5rem;">
+                <div>
+                  <label>Effect:</label>
+                  <select x-model="toleration.effect" @change="updateYaml()">
+                    <option value="">Any Effect</option>
+                    <option value="NoSchedule">NoSchedule</option>
+                    <option value="PreferNoSchedule">PreferNoSchedule</option>
+                    <option value="NoExecute">NoExecute</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Toleration Seconds:</label>
+                  <input type="number" x-model="toleration.tolerationSeconds" @input="updateYaml()" placeholder="3600" :disabled="toleration.effect !== 'NoExecute'">
+                </div>
+                <div style="display: flex; align-items: end;">
+                  <button type="button" @click="removeToleration(index)" style="background-color: #dc3545; color: white;">Remove</button>
+                </div>
+              </div>
+            </div>
+          </template>
+          <button type="button" @click="addToleration()" style="margin-top: 0.5rem;">Add Toleration</button>
+        </div>
+
+        <!-- Basic Affinity -->
+        <div>
+          <h4>Node Affinity (Basic)</h4>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Prefer or require nodes with specific characteristics</p>
+          <div class="grid">
+            <div>
+              <label>Preferred Node Label Key:</label>
+              <input type="text" x-model="affinity.preferredNodeKey" @input="updateYaml()" placeholder="node-type">
+            </div>
+            <div>
+              <label>Preferred Node Label Value:</label>
+              <input type="text" x-model="affinity.preferredNodeValue" @input="updateYaml()" placeholder="spot">
+            </div>
+          </div>
+          <div class="grid" style="margin-top: 1rem;">
+            <div>
+              <label>Required Node Label Key:</label>
+              <input type="text" x-model="affinity.requiredNodeKey" @input="updateYaml()" placeholder="kubernetes.io/arch">
+            </div>
+            <div>
+              <label>Required Node Label Value:</label>
+              <input type="text" x-model="affinity.requiredNodeValue" @input="updateYaml()" placeholder="amd64">
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- YAML Editor -->
+    <div x-show="editorMode === 'yaml'" style="display: none;">
+      <label for="yaml">Cronjob YAML:</label>
+      <textarea rows="{{ yaml.count('\n') + 7 }}" id="yaml" name="yaml" x-model="yamlContent" @input="syncFromYaml()">{{yaml}}</textarea>
+    </div>
+
+    <input type="submit" value="Submit">
+  </form>
+</div>
+
+<script>
+function cronEditor() {
+  return {
+    editorMode: 'visual',
+    cronJobName: '',
+    cronJobNamespace: '',
+    cronJobSuspend: 'false',
+    schedule: {
+      minute: '*',
+      hour: '*',
+      day: '*',
+      month: '*',
+      weekday: '*'
+    },
+    container: {
+      name: 'example',
+      image: 'busybox:latest',
+      command: '["/bin/sh", "-c", "echo hello; date"]',
+      restartPolicy: 'OnFailure'
+    },
+    nodeSelector: [
+      { key: 'kubernetes.io/os', value: 'linux' }
+    ],
+    tolerations: [
+      {
+        key: 'kubernetes.azure.com/scalesetpriority',
+        operator: 'Equal',
+        value: 'spot',
+        effect: 'NoSchedule',
+        tolerationSeconds: ''
+      }
+    ],
+    affinity: {
+      preferredNodeKey: '',
+      preferredNodeValue: '',
+      requiredNodeKey: 'kubernetes.azure.com/scalesetpriority',
+      requiredNodeValue: 'spot'
+    },
+    yamlContent: '',
+
+    initFromYaml(yamlStr) {
+      this.yamlContent = yamlStr;
+      this.parseYamlToForm();
+    },
+
+    parseYamlToForm() {
+      try {
+        // Reset scheduling fields
+        this.nodeSelector = [];
+        this.tolerations = [];
+        this.affinity = {
+          preferredNodeKey: '',
+          preferredNodeValue: '',
+          requiredNodeKey: '',
+          requiredNodeValue: ''
+        };
+
+        // Simple YAML parsing for schedule
+        const lines = this.yamlContent.split('\n');
+        
+        // Extract name
+        const nameLine = lines.find(line => line.trim().startsWith('name:'));
+        if (nameLine) {
+          this.cronJobName = nameLine.split(':')[1].trim().replace(/['"]/g, '');
+        }
+        
+        // Extract namespace
+        const namespaceLine = lines.find(line => line.trim().startsWith('namespace:'));
+        if (namespaceLine) {
+          this.cronJobNamespace = namespaceLine.split(':')[1].trim().replace(/['"]/g, '');
+        }
+        
+        // Extract schedule
+        const scheduleLine = lines.find(line => line.trim().startsWith('schedule:'));
+        if (scheduleLine) {
+          const scheduleStr = scheduleLine.split(':')[1].trim().replace(/['"]/g, '');
+          const parts = scheduleStr.split(' ');
+          if (parts.length === 5) {
+            this.schedule.minute = parts[0];
+            this.schedule.hour = parts[1];
+            this.schedule.day = parts[2];
+            this.schedule.month = parts[3];
+            this.schedule.weekday = parts[4];
+          }
+        }
+        
+        // Extract container info
+        const imageLine = lines.find(line => line.trim().startsWith('image:'));
+        if (imageLine) {
+          this.container.image = imageLine.split(':')[1].trim().replace(/['"]/g, '');
+        }
+        
+        const nameLine2 = lines.find(line => line.trim().startsWith('- name:'));
+        if (nameLine2) {
+          this.container.name = nameLine2.split(':')[1].trim().replace(/['"]/g, '');
+        }
+        
+        // Extract suspend
+        const suspendLine = lines.find(line => line.trim().startsWith('suspend:'));
+        if (suspendLine) {
+          this.cronJobSuspend = suspendLine.split(':')[1].trim().replace(/['"]/g, '');
+        }
+
+        // Parse nodeSelector
+        const nodeSelectorStartIndex = lines.findIndex(line => line.trim() === 'nodeSelector:');
+        if (nodeSelectorStartIndex !== -1) {
+          for (let i = nodeSelectorStartIndex + 1; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.trim() === '' || line.match(/^\s*(tolerations|affinity|containers):/)) break;
+            if (line.includes(':') && !line.trim().startsWith('#')) {
+              const [key, value] = line.split(':').map(s => s.trim());
+              if (key && value && !key.startsWith(' ') === false) {
+                this.nodeSelector.push({ 
+                  key: key.replace(/^\s+/, ''), 
+                  value: value.replace(/['"]/g, '') 
+                });
+              }
+            }
+          }
+        }
+
+        // Parse tolerations (simplified)
+        const tolerationsStartIndex = lines.findIndex(line => line.trim() === 'tolerations:');
+        if (tolerationsStartIndex !== -1) {
+          let currentToleration = null;
+          for (let i = tolerationsStartIndex + 1; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.trim() === '' || line.match(/^\s*(affinity|containers):/)) break;
+            
+            if (line.trim().startsWith('- ')) {
+              if (currentToleration) {
+                this.tolerations.push(currentToleration);
+              }
+              currentToleration = {
+                key: '',
+                operator: 'Equal',
+                value: '',
+                effect: '',
+                tolerationSeconds: ''
+              };
+              
+              // Parse inline toleration if it's on the same line
+              const inlineContent = line.replace(/^\s*-\s*/, '');
+              if (inlineContent.includes('key:')) {
+                const keyMatch = inlineContent.match(/key:\s*["']?(.*?)["']?(?:\s|$)/);
+                if (keyMatch) currentToleration.key = keyMatch[1];
+              }
+            } else if (currentToleration && line.includes(':')) {
+              const [prop, value] = line.split(':').map(s => s.trim());
+              const cleanProp = prop.replace(/^\s+/, '');
+              const cleanValue = value.replace(/['"]/g, '');
+              
+              if (cleanProp === 'key') currentToleration.key = cleanValue;
+              else if (cleanProp === 'operator') currentToleration.operator = cleanValue;
+              else if (cleanProp === 'value') currentToleration.value = cleanValue;
+              else if (cleanProp === 'effect') currentToleration.effect = cleanValue;
+              else if (cleanProp === 'tolerationSeconds') currentToleration.tolerationSeconds = cleanValue;
+            }
+          }
+          if (currentToleration) {
+            this.tolerations.push(currentToleration);
+          }
+        }
+        
+      } catch (e) {
+        console.error('Error parsing YAML:', e);
+      }
+    },
+
+    getCurrentCronExpression() {
+      return `${this.schedule.minute} ${this.schedule.hour} ${this.schedule.day} ${this.schedule.month} ${this.schedule.weekday}`;
+    },
+
+    getCronDescription() {
+      const minute = this.schedule.minute;
+      const hour = this.schedule.hour;
+      const day = this.schedule.day;
+      const month = this.schedule.month;
+      const weekday = this.schedule.weekday;
+      
+      if (minute === '*' && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+        return 'Runs every minute';
+      }
+      
+      let desc = 'Runs ';
+      
+      if (minute.includes('*/')) {
+        desc += `every ${minute.split('*/')[1]} minutes `;
+      } else if (minute !== '*') {
+        desc += `at minute ${minute} `;
+      }
+      
+      if (hour.includes('*/')) {
+        desc += `every ${hour.split('*/')[1]} hours `;
+      } else if (hour !== '*') {
+        desc += `at hour ${hour} `;
+      }
+      
+      if (day !== '*') {
+        desc += `on day ${day} of the month `;
+      }
+      
+      if (month !== '*') {
+        const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        desc += `in ${monthNames[parseInt(month)]} `;
+      }
+      
+      if (weekday !== '*') {
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        desc += `on ${dayNames[parseInt(weekday)]} `;
+      }
+      
+      return desc.trim();
+    },
+
+    updateYaml() {
+      const command = this.container.command.startsWith('[') ? this.container.command : `["${this.container.command}"]`;
+      
+      let yamlContent = `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${this.cronJobName || 'my-cronjob'}
+  namespace: ${this.cronJobNamespace || 'default'}
+spec:
+  schedule: "${this.getCurrentCronExpression()}"
+  suspend: ${this.cronJobSuspend}
+  jobTemplate:
+    spec:
+      template:
+        spec:`;
+
+      // Add nodeSelector if any
+      if (this.nodeSelector.length > 0) {
+        yamlContent += '\n          nodeSelector:';
+        this.nodeSelector.forEach(selector => {
+          if (selector.key && selector.value) {
+            yamlContent += `\n            ${selector.key}: ${selector.value}`;
+          }
+        });
+      }
+
+      // Add tolerations if any
+      if (this.tolerations.length > 0) {
+        yamlContent += '\n          tolerations:';
+        this.tolerations.forEach(toleration => {
+          yamlContent += '\n          -';
+          if (toleration.key) yamlContent += `\n            key: "${toleration.key}"`;
+          if (toleration.operator) {
+            yamlContent += `\n            operator: "${toleration.operator}"`;
+          }
+          if (toleration.value && toleration.operator !== 'Exists') {
+            yamlContent += `\n            value: "${toleration.value}"`;
+          }
+          if (toleration.effect) {
+            yamlContent += `\n            effect: "${toleration.effect}"`;
+          }
+          if (toleration.tolerationSeconds && toleration.effect === 'NoExecute') {
+            yamlContent += `\n            tolerationSeconds: ${toleration.tolerationSeconds}`;
+          }
+        });
+      }
+
+      // Add basic affinity if specified
+      if (this.affinity.preferredNodeKey || this.affinity.requiredNodeKey) {
+        yamlContent += '\n          affinity:';
+        yamlContent += '\n            nodeAffinity:';
+        
+        if (this.affinity.requiredNodeKey && this.affinity.requiredNodeValue) {
+          yamlContent += '\n              requiredDuringSchedulingIgnoredDuringExecution:';
+          yamlContent += '\n                nodeSelectorTerms:';
+          yamlContent += '\n                - matchExpressions:';
+          yamlContent += `\n                  - key: "${this.affinity.requiredNodeKey}"`;
+          yamlContent += '\n                    operator: In';
+          yamlContent += '\n                    values:';
+          yamlContent += `\n                    - "${this.affinity.requiredNodeValue}"`;
+        }
+        
+        if (this.affinity.preferredNodeKey && this.affinity.preferredNodeValue) {
+          yamlContent += '\n              preferredDuringSchedulingIgnoredDuringExecution:';
+          yamlContent += '\n              - weight: 1';
+          yamlContent += '\n                preference:';
+          yamlContent += '\n                  matchExpressions:';
+          yamlContent += `\n                  - key: "${this.affinity.preferredNodeKey}"`;
+          yamlContent += '\n                    operator: In';
+          yamlContent += '\n                    values:';
+          yamlContent += `\n                    - "${this.affinity.preferredNodeValue}"`;
+        }
+      }
+
+      yamlContent += `\n          containers:
+          - name: ${this.container.name}
+            image: ${this.container.image}
+            imagePullPolicy: IfNotPresent
+            command: ${command}
+          restartPolicy: ${this.container.restartPolicy}`;
+
+      this.yamlContent = yamlContent;
+      
+      // Update the actual form field
+      const yamlField = document.getElementById('yaml');
+      if (yamlField) {
+        yamlField.value = this.yamlContent;
+      }
+    },
+
+    syncFromYaml() {
+      this.parseYamlToForm();
+    },
+
+    addNodeSelector() {
+      this.nodeSelector.push({ key: '', value: '' });
+    },
+
+    removeNodeSelector(index) {
+      this.nodeSelector.splice(index, 1);
+      this.updateYaml();
+    },
+
+    addToleration() {
+      this.tolerations.push({
+        key: '',
+        operator: 'Equal',
+        value: '',
+        effect: '',
+        tolerationSeconds: ''
+      });
+    },
+
+    removeToleration(index) {
+      this.tolerations.splice(index, 1);
+      this.updateYaml();
+    }
+  }
+}
+</script>
+
+<style>
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+section {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+button[type="button"] {
+  margin-right: 0.5rem;
+}
+
+button.contrast {
+  background-color: var(--primary);
+  color: var(--primary-inverse);
+}
+
+code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+</style>
 {% endblock %}
