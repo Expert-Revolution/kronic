@@ -496,6 +496,55 @@ def test_index_route_logic_namespace_only_false(mock_get_cronjobs):
         config.NAMESPACE_ONLY = original_namespace_only
 
 
+@patch('app.get_cronjob')
+def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
+    """Test the new details route with an existing cronjob"""
+    # Mock an existing cronjob
+    mock_cronjob = {
+        "apiVersion": "batch/v1",
+        "kind": "CronJob",
+        "metadata": {"name": "test-cronjob", "namespace": "default"},
+        "spec": {
+            "schedule": "*/5 * * * *",
+            "jobTemplate": {
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "containers": [
+                                {"name": "test", "image": "busybox"}
+                            ],
+                            "restartPolicy": "OnFailure"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    mock_get_cronjob.return_value = mock_cronjob
+    
+    with app.test_client() as client:
+        # Test that the route exists and returns a 200 response
+        response = client.get('/namespaces/default/cronjobs/test-cronjob/details')
+        assert response.status_code == 200
+        # Check that it contains expected content
+        assert b'test-cronjob' in response.data
+        assert b'default' in response.data
+
+
+@patch('app.get_cronjob')
+def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
+    """Test the new details route with a non-existent cronjob"""
+    # Mock no cronjob found
+    mock_get_cronjob.return_value = None
+    
+    with app.test_client() as client:
+        # Test that it redirects to the edit/create page
+        response = client.get('/namespaces/default/cronjobs/nonexistent/details')
+        assert response.status_code == 302
+        assert '/namespaces/default/cronjobs/nonexistent' in response.location
+
+
 def test_healthz_endpoint_with_client():
     """Test healthz endpoint through Flask test client"""
     with app.test_client() as client:

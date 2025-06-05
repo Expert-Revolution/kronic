@@ -387,6 +387,25 @@ def view_cronjob(namespace, cronjob_name):
     )
 
 
+@app.route("/namespaces/<namespace>/cronjobs/<cronjob_name>/details")
+@namespace_filter
+@auth.login_required
+def view_cronjob_details(namespace, cronjob_name):
+    """View cronjob details in read-only mode"""
+    cronjob = get_cronjob(namespace, cronjob_name)
+    
+    if not cronjob:
+        # If cronjob doesn't exist, redirect to create page
+        return redirect(f"/namespaces/{namespace}/cronjobs/{cronjob_name}")
+    
+    cronjob_yaml = yaml.dump(cronjob)
+    return render_template(
+        "cronjob_details.html",
+        cronjob=cronjob,
+        yaml=cronjob_yaml,
+    )
+
+
 @app.route("/api/")
 @auth.login_required
 def api_index():
