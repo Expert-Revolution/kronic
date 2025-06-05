@@ -10,7 +10,7 @@
 </article>
 {% endif %}
 
-<div x-data="cronEditor()" x-init="initFromYaml({{ yaml|tojson }})">
+<div x-data="cronEditor()" data-yaml='{{ yaml|tojson }}' x-init="initFromDataYaml()">
   <form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
     <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
     
@@ -341,6 +341,15 @@ function cronEditor() {
     initFromYaml(yamlStr) {
       this.yamlContent = yamlStr;
       this.parseYamlToForm();
+    },
+
+    initFromDataYaml() {
+      // Get YAML content from data attribute
+      const yamlStr = this.$el.dataset.yaml;
+      if (yamlStr) {
+        this.yamlContent = JSON.parse(yamlStr);
+        this.parseYamlToForm();
+      }
     },
 
     parseYamlToForm() {
