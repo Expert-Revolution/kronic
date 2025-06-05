@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: kronic
+      POSTGRES_USER: kronic
+      POSTGRES_PASSWORD: kronic123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kronic -d kronic"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   kronic:
     build:
       context: .
@@ -7,14 +23,28 @@ services:
       KRONIC_ALLOW_NAMESPACES: ""
       KRONIC_ADMIN_PASSWORD: "test2"
       KUBECONFIG: "/home/kronic/.kube/config"
+      # Database configuration
+      KRONIC_DATABASE_HOST: postgres
+      KRONIC_DATABASE_PORT: 5432
+      KRONIC_DATABASE_NAME: kronic
+      KRONIC_DATABASE_USER: kronic
+      KRONIC_DATABASE_PASSWORD: kronic123
+      # Admin user for seeding
+      KRONIC_ADMIN_EMAIL: admin@example.com
     volumes:
       - .:/app
       # Mount the entire .kube directory for proper kubernetes configuration
       - $HOME/.kube:/home/kronic/.kube
     ports:
       - 5001:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
     # networks:
     #   - k3d-kronic-localdev
+
+volumes:
+  postgres_data:
 
 # networks:
 #   k3d-kronic-localdev:

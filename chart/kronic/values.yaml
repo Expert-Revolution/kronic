@@ -26,6 +26,44 @@ env:
   # -- Limit Kronic to its own namespace. Set to "true" to enable.
   KRONIC_NAMESPACE_ONLY: ""
 
+# Database configuration
+database:
+  # -- Enable PostgreSQL database
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  # -- Database name
+  name: kronic
+  # -- Database user
+  user: kronic
+  # -- Database password (if not provided, a random password will be generated)
+  password: ""
+  # -- Use existing secret for database password
+  existingSecret: ""
+  # -- Key in existing secret for database password
+  existingSecretKey: "password"
+  # -- Admin email for initial user creation
+  adminEmail: "admin@example.com"
+  persistence:
+    # -- Enable persistent storage for database
+    enabled: true
+    # -- Storage class for database persistent volume
+    storageClass: ""
+    # -- Size of database persistent volume
+    size: 8Gi
+    # -- Access modes for database persistent volume
+    accessModes:
+      - ReadWriteOnce
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
 # Specify whether to create ClusterRole and ClusterRoleBinding
 # for kronic. If disabled, you will need to handle permissions
 # manually.
