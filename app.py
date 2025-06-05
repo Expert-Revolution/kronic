@@ -436,6 +436,21 @@ def api_get_cronjob(namespace, cronjob_name):
     return cronjob
 
 
+@app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml")
+@namespace_filter
+@auth.login_required
+def api_get_cronjob_yaml(namespace, cronjob_name):
+    """Get cronjob as YAML string for editor"""
+    cronjob = get_cronjob(namespace, cronjob_name)
+    if not cronjob:
+        return {"error": "CronJob not found"}, 404
+    
+    # Strip immutable fields for editing
+    cronjob = _strip_immutable_fields(cronjob)
+    cronjob_yaml = yaml.dump(cronjob)
+    return {"yaml": cronjob_yaml}
+
+
 @app.route(
     "/api/namespaces/<namespace>/cronjobs/<cronjob_name>/clone", methods=["POST"]
 )

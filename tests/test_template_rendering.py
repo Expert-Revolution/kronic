@@ -57,9 +57,16 @@ spec:
             </div>
             '''
             
-            # Simulate the fixed template content (new approach)
-            new_template_content = '''
+            # Data attribute approach (previous fix)
+            data_attr_template_content = '''
             <div x-data="cronEditor()" data-yaml='{{ yaml|tojson }}' x-init="initFromDataYaml()">
+                <!-- template content -->
+            </div>
+            '''
+            
+            # New API approach (current fix)
+            api_template_content = '''
+            <div x-data="cronEditor()" x-init="initFromApi()">
                 <!-- template content -->
             </div>
             '''
@@ -67,67 +74,46 @@ spec:
             # Test the old approach (should have issues)
             old_result = render_template_string(old_template_content, yaml=yaml_content)
             
-            # Test the new approach (should be safe)
-            new_result = render_template_string(new_template_content, yaml=yaml_content)
+            # Test the data attribute approach (should be safe)
+            data_attr_result = render_template_string(data_attr_template_content, yaml=yaml_content)
+            
+            # Test the new API approach (cleanest)
+            api_result = render_template_string(api_template_content)
             
             # The old approach has potential Alpine.js parsing issues
             self.assertIn('x-init="initFromYaml(', old_result)
             
-            # The new approach should be safe for Alpine.js
-            self.assertIn("data-yaml='", new_result)
-            self.assertIn('x-init="initFromDataYaml()"', new_result)
+            # The data attribute approach should be safe for Alpine.js
+            self.assertIn("data-yaml='", data_attr_result)
+            self.assertIn('x-init="initFromDataYaml()"', data_attr_result)
             
-            # Verify that the data attribute contains properly JSON content
-            import re
-            match = re.search(r"data-yaml='([^']*)'", new_result)
-            if match:
-                json_content = match.group(1)
-                # Should be valid JSON
-                import json
-                try:
-                    parsed = json.loads(json_content)
-                    self.assertIn("test-cronjob", parsed)
-                except json.JSONDecodeError:
-                    self.fail("data-yaml content is not valid JSON")
-            else:
-                self.fail("Could not find data-yaml attribute with single quotes")
+            # The API approach should be cleanest (no embedded YAML)
+            self.assertIn('x-init="initFromApi()"', api_result)
+            self.assertNotIn("data-yaml", api_result)
+            self.assertNotIn("{{ yaml|tojson }}", api_result)
             
-            print(f"Fixed template approach: {new_result.strip()}")
+            print(f"✓ API-based template approach: {api_result.strip()}")
 
-    def test_fixed_template_yaml_handling(self):
-        """Test that the new template approach handles YAML correctly."""
+    def test_new_api_template_approach(self):
+        """Test that the new API template approach is clean and safe."""
         with app.app_context():
             from flask import render_template_string
             
-            # Test with complex YAML that would break the old approach
-            complex_yaml = '''apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: "complex-name-with-quotes"
-  annotations:
-    description: "This has \\"nested quotes\\" and
-multiple lines"
-spec:
-  schedule: "*/5 * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-          - name: test
-            command: ["sh", "-c", "echo \\"hello\\"; echo 'world'"]'''
-
-            # New template approach
-            template = '''<div x-data="cronEditor()" data-yaml='{{ yaml|tojson }}' x-init="initFromDataYaml()"></div>'''
+            # New template approach - no embedded YAML data
+            template = '''<div x-data="cronEditor()" x-init="initFromApi()"></div>'''
             
-            result = render_template_string(template, yaml=complex_yaml)
+            result = render_template_string(template)
             
-            # Should contain the data attribute with JSON content in single quotes
-            self.assertIn("data-yaml='", result)
-            self.assertIn('x-init="initFromDataYaml()"', result)
+            # Should NOT contain data-yaml attributes (data is fetched via API)
+            self.assertNotIn("data-yaml=", result)
             
-            # Should not have broken Alpine.js expressions
-            self.assertNotIn('x-init="initFromYaml(', result)
+            # Should use the new API-based initialization
+            self.assertIn('x-init="initFromApi()"', result)
+            
+            # Should not have any embedded YAML data
+            self.assertNotIn('{{ yaml|tojson }}', result)
+            
+            print(f"✓ New API-based template approach: {result.strip()}")
 
     def test_yaml_content_json_escaping(self):
         """Test how YAML content is JSON-escaped in templates."""
@@ -191,6 +177,23 @@ spec:
             print(f"✓ Original YAML length: {len(k8s_yaml)}")
             print(f"✓ Decoded YAML length: {len(decoded_yaml)}")
             print(f"✓ Are they identical? {k8s_yaml == decoded_yaml}")
+
+
+    def test_new_yaml_api_endpoint(self):
+        """Test that the new YAML API endpoint is defined correctly."""
+        with app.app_context():
+            # Check that the route exists in the application
+            routes = [rule.rule for rule in app.url_map.iter_rules()]
+            yaml_route = '/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml'
+            
+            self.assertIn(yaml_route, routes, 
+                         f"YAML API endpoint not found. Available routes: {[r for r in routes if 'yaml' in r or 'cronjob' in r]}")
+            
+            # Test the function exists and has the right structure
+            from app import api_get_cronjob_yaml
+            self.assertTrue(callable(api_get_cronjob_yaml), "api_get_cronjob_yaml should be callable")
+            
+            print("✓ New YAML API endpoint is properly defined")
 
 
 if __name__ == '__main__':

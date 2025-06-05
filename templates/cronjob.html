@@ -10,7 +10,7 @@
 </article>
 {% endif %}
 
-<div x-data="cronEditor()" data-yaml='{{ yaml|tojson }}' x-init="initFromDataYaml()">
+<div x-data="cronEditor()" x-init="initFromApi()">
   <form action="/namespaces/{{cronjob.metadata.namespace}}/cronjobs/{{cronjob.metadata.name}}" method="post">
     <p>To create a new CronJob from this one, change the <code>name</code> fields as desired</p>
     
@@ -355,6 +355,49 @@ function cronEditor() {
         // Now parseYamlToForm() will do the actual YAML parsing
         this.parseYamlToForm();
       }
+    },
+
+    async initFromApi() {
+      // New approach: fetch YAML from backend API
+      try {
+        const namespace = this.getNamespaceFromUrl();
+        const cronjobName = this.getCronjobNameFromUrl();
+        
+        if (!namespace || !cronjobName) {
+          console.error('Could not determine namespace or cronjob name from URL');
+          return;
+        }
+
+        const response = await fetch(`/api/namespaces/${namespace}/cronjobs/${cronjobName}/yaml`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.warn('CronJob not found, will create new one');
+            return; // Let the form stay empty for new cronjob creation
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.yamlContent = data.yaml;
+        this.parseYamlToForm();
+      } catch (error) {
+        console.error('Failed to fetch cronjob YAML:', error);
+        // Could show an error message to user here
+      }
+    },
+
+    getNamespaceFromUrl() {
+      // Extract namespace from URL path like /namespaces/default/cronjobs/test
+      const pathParts = window.location.pathname.split('/');
+      const nsIndex = pathParts.indexOf('namespaces');
+      return nsIndex >= 0 && pathParts[nsIndex + 1] ? pathParts[nsIndex + 1] : null;
+    },
+
+    getCronjobNameFromUrl() {
+      // Extract cronjob name from URL path like /namespaces/default/cronjobs/test
+      const pathParts = window.location.pathname.split('/');
+      const cjIndex = pathParts.indexOf('cronjobs');
+      return cjIndex >= 0 && pathParts[cjIndex + 1] ? pathParts[cjIndex + 1] : null;
     },
 
     parseYamlToForm() {
