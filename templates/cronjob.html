@@ -140,21 +140,22 @@
         <!-- JSON Helper for -d parameter -->
         <div x-show="container.command.includes('-d')" style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4>JSON Data Helper</h4>
-          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Enter JSON data for the -d parameter. This will help format your JSON correctly for curl commands.</p>
+          <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Enter JSON data for the -d parameter. This will help format your JSON correctly for curl commands and Kubernetes YAML.</p>
           <label for="json-helper">JSON Data:</label>
           <textarea id="json-helper" x-model="jsonData" @input="updateCommandWithJson()" rows="4" placeholder='{"accessToken": "string", "username": "RPA", "userId": "0"}'></textarea>
-          <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+          <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" @click="formatJson()" style="background-color: #007bff;">Format JSON (Pretty)</button>
-            <button type="button" @click="formatJsonForCurl()" style="background-color: #28a745;">Format for Curl</button>
-            <button type="button" @click="showCurlExample()" style="background-color: #6c757d;">Show Curl Example</button>
+            <button type="button" @click="formatJsonForCurl()" style="background-color: #28a745;">Format for Terminal Curl</button>
+            <button type="button" @click="formatJsonForK8s()" style="background-color: #fd7e14;">Format for K8s YAML</button>
+            <button type="button" @click="showCurlExample()" style="background-color: #6c757d;">Show Examples</button>
           </div>
           <p style="font-size: 0.8em; color: #888; margin-top: 0.5rem;">
-            <strong>Tip:</strong> Use "Format for Curl" to create a single-line JSON that's ready to copy-paste into curl commands.
+            <strong>Tip:</strong> Use "Format for K8s YAML" for Kubernetes command arrays, or "Format for Terminal Curl" for direct terminal usage.
           </p>
           
           <!-- Curl Example Display -->
           <div x-show="curlExample" x-transition style="margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem;">
-            <h5 style="margin-top: 0; color: #495057;">Copy-Ready Curl Command:</h5>
+            <h5 style="margin-top: 0; color: #495057;">Copy-Ready Commands:</h5>
             <code style="display: block; padding: 0.5rem; background: #e9ecef; border-radius: 0.25rem; white-space: pre-wrap; word-break: break-all;" x-text="curlExample"></code>
             <button type="button" @click="copyCurlExample()" style="margin-top: 0.5rem; background-color: #007bff;">Copy to Clipboard</button>
           </div>
@@ -312,7 +313,7 @@ function cronEditor() {
     container: {
       name: 'curl-{name-placeholder}',
       image: 'curlimages/curl:latest',
-      command: '["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", \'{"accessToken": "string", "username": "RPA", "userId": "0"}\']',
+      command: '["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", "{\\"accessToken\\": \\"string\\", \\"username\\": \\"RPA\\", \\"userId\\": \\"0\\"}"]',
       restartPolicy: 'Never'
     },
     nodeSelector: [
@@ -699,19 +700,43 @@ spec:
       }
     },
 
+    formatJsonForK8s() {
+      try {
+        const parsed = JSON.parse(this.jsonData);
+        // Format JSON with proper escaping for K8s YAML command array
+        const compactJson = JSON.stringify(parsed);
+        // Escape double quotes for YAML string
+        const escapedJson = compactJson.replace(/"/g, '\\"');
+        this.jsonData = escapedJson;
+        this.updateCommandWithJson();
+      } catch (e) {
+        alert('Invalid JSON format. Please check your syntax.');
+      }
+    },
+
     updateCommandWithJson() {
       if (this.jsonData && this.container.command.includes('-d')) {
         try {
-          // Parse and escape the JSON properly for curl command
-          const parsed = JSON.parse(this.jsonData);
+          // Parse the original JSON (might be escaped or unescaped)
+          let jsonToParse = this.jsonData;
+          
+          // If it looks escaped, unescape it first for parsing
+          if (jsonToParse.includes('\\"')) {
+            jsonToParse = jsonToParse.replace(/\\"/g, '"');
+          }
+          
+          const parsed = JSON.parse(jsonToParse);
           const compactJson = JSON.stringify(parsed);
+          
+          // For K8s YAML command array, we need to escape quotes
+          const escapedJson = compactJson.replace(/"/g, '\\"');
           
           // Update the command to use the formatted JSON
           let updatedCommand = this.container.command;
           
-          // Replace the JSON part in the -d parameter
+          // Replace the JSON part in the -d parameter for K8s command array format
           const dParamRegex = /"-d",\s*"[^"]*"/g;
-          const replacement = `"-d", '${compactJson}'`;
+          const replacement = `"-d", "${escapedJson}"`;
           
           if (updatedCommand.match(dParamRegex)) {
             updatedCommand = updatedCommand.replace(dParamRegex, replacement);
@@ -729,7 +754,13 @@ spec:
 
     showCurlExample() {
       try {
-        const parsed = JSON.parse(this.jsonData);
+        // Parse the JSON (handle escaped or unescaped)
+        let jsonToParse = this.jsonData;
+        if (jsonToParse.includes('\\"')) {
+          jsonToParse = jsonToParse.replace(/\\"/g, '"');
+        }
+        
+        const parsed = JSON.parse(jsonToParse);
         const compactJson = JSON.stringify(parsed);
         
         // Extract endpoint from command if available
@@ -744,10 +775,15 @@ spec:
           endpoint = urlMatch[1];
         }
         
-        // Generate curl command ready for copy-paste
-        this.curlExample = `curl -v -X POST "${endpoint}" -d '${compactJson}'`;
+        // Generate both curl command and K8s command array
+        const curlCommand = `curl -v -X POST "${endpoint}" -d '${compactJson}'`;
+        const escapedJson = compactJson.replace(/"/g, '\\"');
+        const k8sCommand = `["curl", "-v", "-X", "POST", "${endpoint}", "-d", "${escapedJson}"]`;
+        
+        this.curlExample = `Terminal curl command:\n${curlCommand}\n\nK8s YAML command array:\n${k8sCommand}`;
       } catch (e) {
-        this.curlExample = `curl -v -X POST "{endpoint-placeholder}" -d '${this.jsonData || "{\"key\": \"value\"}"}'`;
+        const fallbackJson = this.jsonData || '{"key": "value"}';
+        this.curlExample = `Terminal curl command:\ncurl -v -X POST "{endpoint-placeholder}" -d '${fallbackJson}'\n\nK8s YAML command array:\n["curl", "-v", "-X", "POST", "{endpoint-placeholder}", "-d", "${fallbackJson.replace(/"/g, '\\"')}"]`;
       }
     },
 

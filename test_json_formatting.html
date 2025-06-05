@@ -11,11 +11,12 @@
         <label>JSON Data:</label>
         <textarea x-model="jsonData" rows="4" cols="50"></textarea><br><br>
         
-        <button @click="formatJsonForCurl()">Format for Curl</button>
-        <button @click="showCurlExample()">Show Curl Example</button><br><br>
+        <button @click="formatJsonForCurl()">Format for Terminal Curl</button>
+        <button @click="formatJsonForK8s()">Format for K8s YAML</button>
+        <button @click="showCurlExample()">Show Examples</button><br><br>
         
         <div x-show="curlExample">
-            <h3>Curl Command:</h3>
+            <h3>Copy-Ready Commands:</h3>
             <code x-text="curlExample" style="display: block; background: #f0f0f0; padding: 10px; white-space: pre-wrap;"></code>
             <button @click="copyCurlExample()">Copy to Clipboard</button>
         </div>
@@ -37,13 +38,38 @@
                     }
                 },
                 
-                showCurlExample() {
+                formatJsonForK8s() {
                     try {
                         const parsed = JSON.parse(this.jsonData);
                         const compactJson = JSON.stringify(parsed);
-                        this.curlExample = `curl -v -X POST "https://example.com/api/endpoint" -d '${compactJson}'`;
+                        // Escape double quotes for K8s YAML command array
+                        const escapedJson = compactJson.replace(/"/g, '\\"');
+                        this.jsonData = escapedJson;
                     } catch (e) {
-                        this.curlExample = `curl -v -X POST "https://example.com/api/endpoint" -d '${this.jsonData || "{\"key\": \"value\"}"}'`;
+                        alert('Invalid JSON format. Please check your syntax.');
+                    }
+                },
+                
+                showCurlExample() {
+                    try {
+                        // Parse the JSON (handle escaped or unescaped)
+                        let jsonToParse = this.jsonData;
+                        if (jsonToParse.includes('\\"')) {
+                            jsonToParse = jsonToParse.replace(/\\"/g, '"');
+                        }
+                        
+                        const parsed = JSON.parse(jsonToParse);
+                        const compactJson = JSON.stringify(parsed);
+                        
+                        // Generate both curl command and K8s command array
+                        const curlCommand = `curl -v -X POST "https://example.com/api/endpoint" -d '${compactJson}'`;
+                        const escapedJson = compactJson.replace(/"/g, '\\"');
+                        const k8sCommand = `["curl", "-v", "-X", "POST", "https://example.com/api/endpoint", "-d", "${escapedJson}"]`;
+                        
+                        this.curlExample = `Terminal curl command:\n${curlCommand}\n\nK8s YAML command array:\n${k8sCommand}`;
+                    } catch (e) {
+                        const fallbackJson = this.jsonData || '{"key": "value"}';
+                        this.curlExample = `Terminal curl command:\ncurl -v -X POST "https://example.com/api/endpoint" -d '${fallbackJson}'\n\nK8s YAML command array:\n["curl", "-v", "-X", "POST", "https://example.com/api/endpoint", "-d", "${fallbackJson.replace(/"/g, '\\"')}"]`;
                     }
                 },
                 
