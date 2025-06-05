@@ -31,13 +31,22 @@ SessionLocal: Optional[sessionmaker] = None
 
 def get_database_url() -> Optional[str]:
     """Get the database URL from environment variables."""
-    if DATABASE_URL:
-        return DATABASE_URL
+    database_url = os.environ.get("KRONIC_DATABASE_URL")
+    if database_url:
+        return database_url
     
-    if all([DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER]):
+    # Only construct URL if explicitly configured (not using defaults)
+    database_host = os.environ.get("KRONIC_DATABASE_HOST")
+    database_port = os.environ.get("KRONIC_DATABASE_PORT", "5432")
+    database_name = os.environ.get("KRONIC_DATABASE_NAME")
+    database_user = os.environ.get("KRONIC_DATABASE_USER")
+    database_password = os.environ.get("KRONIC_DATABASE_PASSWORD", "")
+    
+    # Only build URL if at least host, name, and user are explicitly set
+    if database_host and database_name and database_user:
         return (
-            f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@"
-            f"{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+            f"postgresql://{database_user}:{database_password}@"
+            f"{database_host}:{database_port}/{database_name}"
         )
     
     return None
@@ -56,14 +65,19 @@ def init_database() -> bool:
         log.info("No database configuration found, database features disabled")
         return False
     
+    # Read pool configuration from environment
+    pool_size = int(os.environ.get("KRONIC_DATABASE_POOL_SIZE", "20"))
+    max_overflow = int(os.environ.get("KRONIC_DATABASE_MAX_OVERFLOW", "0"))
+    pool_timeout = int(os.environ.get("KRONIC_DATABASE_POOL_TIMEOUT", "30"))
+    
     try:
         # Create engine with connection pooling
         engine = create_engine(
             database_url,
             poolclass=QueuePool,
-            pool_size=DATABASE_POOL_SIZE,
-            max_overflow=DATABASE_MAX_OVERFLOW,
-            pool_timeout=DATABASE_POOL_TIMEOUT,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=pool_timeout,
             pool_pre_ping=True,  # Verify connections before use
             echo=False,  # Set to True for SQL debugging
         )

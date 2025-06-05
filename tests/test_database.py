@@ -54,18 +54,21 @@ class TestDatabaseConfiguration:
         """Test when no database configuration is provided."""
         import importlib
         
-        # Clear database environment variables
+        # Clear all database environment variables
         env_vars_to_clear = [
             'KRONIC_DATABASE_URL',
-            'KRONIC_DATABASE_HOST',
+            'KRONIC_DATABASE_HOST', 
             'KRONIC_DATABASE_PORT',
             'KRONIC_DATABASE_NAME',
             'KRONIC_DATABASE_USER',
             'KRONIC_DATABASE_PASSWORD'
         ]
         
-        with patch.dict(os.environ, {k: v for k, v in os.environ.items() 
-                                   if k not in env_vars_to_clear}):
+        # Create a clean environment without database vars
+        clean_env = {k: v for k, v in os.environ.items() 
+                    if k not in env_vars_to_clear}
+        
+        with patch.dict(os.environ, clean_env, clear=True):
             # Reload module to pick up new environment variables
             if 'database' in sys.modules:
                 importlib.reload(sys.modules['database'])
@@ -177,11 +180,12 @@ class TestDatabaseIntegration:
         original_db_enabled = config.DATABASE_ENABLED
         
         try:
-            # Disable database and set up env var users
+            # Disable database and set up env var users  
             config.DATABASE_ENABLED = False
             config.USERS = {'admin': 'hashed_password'}
             
-            with patch('werkzeug.security.check_password_hash', return_value=True):
+            # Mock check_password_hash to return True
+            with patch('app.check_password_hash', return_value=True):
                 result = verify_password('admin', 'password')
                 assert result == 'admin'
         finally:

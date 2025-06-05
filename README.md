@@ -157,6 +157,8 @@ networkPolicy:
 ### Authentication
 
 Kronic supports HTTP Basic authentication to the backend. It is enabled by default when installed via the helm chart. If no password is specified, the default username is `kronic` and the password is generated randomly.
+
+#### Environment Variable Authentication
 A username and password can be set via helm values under `auth.adminUsername` and `auth.adminPassword`, or you may create a Kubernetes secret for the deployment to reference.
 
 To retrieve the randomly generated admin password:
@@ -171,6 +173,38 @@ kubectl --namespace <namespace> create secret generic custom-password --from-lit
 ## Tell the helm chart to use this secret:
 helm --namespace <namespace> upgrade kronic kronic/kronic --set auth.existingSecretName=custom-password
 ```
+
+#### Database Authentication
+Kronic supports PostgreSQL-backed user and role management for enhanced security and scalability. When database authentication is configured, it takes precedence over environment variable authentication.
+
+**Features:**
+- User management with email-based login
+- Role-based access control with granular permissions
+- Database-backed session management
+- Backward compatibility with environment variable authentication
+
+**Configuration:**
+```bash
+# Database connection
+export KRONIC_DATABASE_HOST=postgres.example.com
+export KRONIC_DATABASE_NAME=kronic
+export KRONIC_DATABASE_USER=kronic_user
+export KRONIC_DATABASE_PASSWORD=secure_password
+
+# Or use a single connection URL
+export KRONIC_DATABASE_URL=postgresql://user:pass@host:port/db
+```
+
+**Setup:**
+```bash
+# Run migrations
+alembic upgrade head
+
+# Create initial users and roles
+python scripts/seed_database.py
+```
+
+See [Database Documentation](docs/database.md) for complete setup and configuration details.
 
 ## Deploying to K8S
 
