@@ -1,0 +1,46 @@
+name: Build Helm Repository
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'chart/**'
+      - '.github/workflows/helm-release.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-helm-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.14.0'
+
+      - name: Create charts directory
+        run: mkdir -p docs/charts
+
+      - name: Package Helm chart
+        run: helm package chart/kronic -d docs/charts
+
+      - name: Generate Helm repository index
+        run: |
+          helm repo index docs/charts --url https://davides93.github.io/kronic/charts
+          cp docs/charts/index.yaml docs/index.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/charts/ docs/index.yaml
+          git diff --staged --quiet || git commit -m "Update Helm repository [skip ci]"
+          git push
