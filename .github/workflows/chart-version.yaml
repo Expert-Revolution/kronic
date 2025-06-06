@@ -61,10 +61,17 @@ jobs:
         if: steps.check-version-commit.outputs.skip == 'false'
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+            TYPE="${{ github.event.inputs.version_type }}"
           else
-            # For push events, use auto-detection
-            echo "type=auto" >> $GITHUB_OUTPUT
+            TYPE="auto"
+          fi
+
+          # Validate the type
+          if [[ "$TYPE" == "major" || "$TYPE" == "minor" || "$TYPE" == "patch" || "$TYPE" == "auto" ]]; then
+            echo "type=$TYPE" >> $GITHUB_OUTPUT
+          else
+            echo "Error: Invalid bump type '$TYPE'. Must be one of: major, minor, patch, auto."
+            exit 1
           fi
 
       - name: Bump chart version
