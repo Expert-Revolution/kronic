@@ -260,3 +260,10 @@ jobs:
           git commit -m "Update CHANGELOG.md for chart version \
             ${{ needs.bump-version.outputs.new-version }}"
           git push
+
+  update-helm-repo:
+    needs: [bump-version, create-release, update-changelog]
+    if: needs.bump-version.outputs.version-changed == 'true'
+    uses: ./.github/workflows/helm-release.yaml
+    with:
+      chart_version: ${{ needs.bump-version.outputs.new-version }}
