@@ -65,9 +65,24 @@ jobs:
         uses: azure/setup-helm@v4
         with:
           version: 'v3.12.3'
-      
       - name: Generate Chart Readme
         run: ./.github/gen-chart-readme.sh
+
+      - name: Create gh-pages branch if it doesn't exist
+        run: |
+          if ! git ls-remote --exit-code --heads origin gh-pages; then
+            echo "gh-pages branch does not exist, creating it..."
+            git checkout --orphan gh-pages
+            git reset --hard
+            mkdir -p .cr-index
+            echo -e "apiVersion: v1\nentries: {}\ngenerated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" > .cr-index/index.yaml
+            git add .cr-index/index.yaml
+            git commit -m "Initialize gh-pages branch for Helm chart repository"
+            git push origin gh-pages
+            git checkout -
+          else
+            echo "gh-pages branch already exists"
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
