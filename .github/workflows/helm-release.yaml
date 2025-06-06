@@ -8,6 +8,12 @@ on:
       - 'chart/**'
       - '.github/workflows/helm-release.yaml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      chart_version:
+        description: 'Chart version to package'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -20,6 +26,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -29,7 +39,27 @@ jobs:
       - name: Create charts directory
         run: mkdir -p docs/charts
 
+      - name: Get chart version
+        id: chart-version
+        run: |
+          CHART_VERSION=$(grep "^version:" chart/kronic/Chart.yaml | awk '{print $2}' | tr -d '"')
+          echo "version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $CHART_VERSION"
+
+      - name: Check if chart package already exists
+        id: check-package
+        run: |
+          CHART_VERSION="${{ steps.chart-version.outputs.version }}"
+          if [ -f "docs/charts/kronic-${CHART_VERSION}.tgz" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Chart package kronic-${CHART_VERSION}.tgz already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Chart package kronic-${CHART_VERSION}.tgz does not exist"
+          fi
+
       - name: Package Helm chart
+        if: steps.check-package.outputs.exists == 'false'
         run: helm package chart/kronic -d docs/charts
 
       - name: Generate Helm repository index
@@ -42,5 +72,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/charts/ docs/index.yaml
-          git diff --staged --quiet || git commit -m "Update Helm repository [skip ci]"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Helm repository for chart version ${{ steps.chart-version.outputs.version }} [skip ci]"
+            git push
+          fi
