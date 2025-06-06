@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div x-data="loginForm()" class="container">
+  <div style="max-width: 400px; margin: 0 auto;">
+    <article>
+      <header>
+        <h1>Login to Kronic</h1>
+        <p>Enter your credentials to access the CronJob manager.</p>
+      </header>
+      
+      <form @submit.prevent="submitLogin">
+        <div x-show="errorMessage" class="alert" style="background-color: #ffe6e6; color: #d63384; padding: 10px; border-radius: 5px; margin-bottom: 1rem;">
+          <span x-text="errorMessage"></span>
+        </div>
+        
+        <label for="email">
+          Email
+          <input 
+            type="email" 
+            id="email" 
+            x-model="form.email" 
+            placeholder="Enter your email"
+            required
+            autocomplete="email"
+          >
+        </label>
+        
+        <label for="password">
+          Password
+          <input 
+            type="password" 
+            id="password" 
+            x-model="form.password" 
+            placeholder="Enter your password"
+            required
+            autocomplete="current-password"
+          >
+        </label>
+        
+        <button 
+          type="submit" 
+          :disabled="loading"
+          style="width: 100%;"
+        >
+          <span x-show="!loading">Login</span>
+          <span x-show="loading">Logging in...</span>
+        </button>
+      </form>
+      
+      <footer style="text-align: center; margin-top: 1rem;">
+        <p>
+          <small>
+            Don't have an account? 
+            <a href="/register" @click.prevent="showRegister = true; errorMessage = ''">Register here</a>
+          </small>
+        </p>
+      </footer>
+    </article>
+    
+    <!-- Registration Modal -->
+    <div x-show="showRegister" x-transition style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+      <article style="max-width: 400px; margin: 20px;">
+        <header>
+          <h2>Register</h2>
+          <button @click="showRegister = false; errorMessage = ''" style="float: right; background: none; border: none; font-size: 1.2rem;">&times;</button>
+        </header>
+        
+        <form @submit.prevent="submitRegister">
+          <div x-show="regErrorMessage" class="alert" style="background-color: #ffe6e6; color: #d63384; padding: 10px; border-radius: 5px; margin-bottom: 1rem;">
+            <span x-text="regErrorMessage"></span>
+          </div>
+          
+          <div x-show="regSuccessMessage" class="alert" style="background-color: #e6ffe6; color: #198754; padding: 10px; border-radius: 5px; margin-bottom: 1rem;">
+            <span x-text="regSuccessMessage"></span>
+          </div>
+          
+          <label for="reg-email">
+            Email
+            <input 
+              type="email" 
+              id="reg-email" 
+              x-model="registerForm.email" 
+              placeholder="Enter your email"
+              required
+            >
+          </label>
+          
+          <label for="reg-password">
+            Password
+            <input 
+              type="password" 
+              id="reg-password" 
+              x-model="registerForm.password" 
+              placeholder="Enter a strong password"
+              required
+              minlength="8"
+            >
+            <small>Minimum 8 characters with uppercase, lowercase, number and special character</small>
+          </label>
+          
+          <label for="reg-confirm-password">
+            Confirm Password
+            <input 
+              type="password" 
+              id="reg-confirm-password" 
+              x-model="registerForm.confirmPassword" 
+              placeholder="Confirm your password"
+              required
+            >
+          </label>
+          
+          <button 
+            type="submit" 
+            :disabled="regLoading"
+            style="width: 100%;"
+          >
+            <span x-show="!regLoading">Register</span>
+            <span x-show="regLoading">Creating account...</span>
+          </button>
+        </form>
+      </article>
+    </div>
+  </div>
+</div>
+
+<script>
+function loginForm() {
+  return {
+    form: {
+      email: '',
+      password: ''
+    },
+    registerForm: {
+      email: '',
+      password: '',
+      confirmPassword: ''
+    },
+    loading: false,
+    regLoading: false,
+    errorMessage: '',
+    regErrorMessage: '',
+    regSuccessMessage: '',
+    showRegister: false,
+    
+    async submitLogin() {
+      this.loading = true;
+      this.errorMessage = '';
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(this.form)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Store JWT token
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('refreshToken', data.refresh_token);
+          
+          // Redirect to dashboard
+          window.location.href = '/';
+        } else {
+          this.errorMessage = data.error || 'Login failed';
+        }
+      } catch (error) {
+        this.errorMessage = 'Network error. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async submitRegister() {
+      this.regLoading = true;
+      this.regErrorMessage = '';
+      this.regSuccessMessage = '';
+      
+      if (this.registerForm.password !== this.registerForm.confirmPassword) {
+        this.regErrorMessage = 'Passwords do not match';
+        this.regLoading = false;
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: this.registerForm.email,
+            password: this.registerForm.password
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          this.regSuccessMessage = 'Account created successfully! You can now login.';
+          this.registerForm = { email: '', password: '', confirmPassword: '' };
+          setTimeout(() => {
+            this.showRegister = false;
+            this.regSuccessMessage = '';
+          }, 2000);
+        } else {
+          this.regErrorMessage = data.error || 'Registration failed';
+        }
+      } catch (error) {
+        this.regErrorMessage = 'Network error. Please try again.';
+      } finally {
+        this.regLoading = false;
+      }
+    }
+  }
+}
+</script>
+{% endblock %}
