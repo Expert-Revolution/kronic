@@ -323,6 +323,40 @@ The integration tests automatically create and manage ephemeral Kubernetes clust
 Integration tests are automatically skipped if the required tools are not available.
 
 
+## Helm Chart Versioning
+
+The Kronic Helm chart follows [Semantic Versioning](https://semver.org/) principles with automated version management:
+
+### Version Format
+- **MAJOR**: Breaking changes requiring user intervention
+- **MINOR**: New features and non-breaking changes  
+- **PATCH**: Bug fixes and small improvements
+
+### Automated Versioning
+Chart versions are automatically bumped based on:
+- **Commit messages**: Using conventional commit keywords
+- **File changes**: Analyzing modified chart files
+- **Manual triggers**: Via GitHub Actions workflow dispatch
+
+### Version Bumping
+```bash
+# Manual version bumps
+./scripts/bump-chart-version.sh patch   # Bug fixes
+./scripts/bump-chart-version.sh minor   # New features  
+./scripts/bump-chart-version.sh major   # Breaking changes
+./scripts/bump-chart-version.sh auto    # Auto-detect from commits
+```
+
+### Releases
+Each chart version automatically creates:
+- Git tags (`kronic-chart-X.Y.Z`)
+- GitHub releases with packaged charts
+- Updated changelog entries
+- Helm repository updates
+
+For detailed versioning guidelines, see [docs/CHART_VERSIONING.md](docs/CHART_VERSIONING.md).
+
+
 ## Todo
 
 - [x] CI/CD pipeline and versioning
