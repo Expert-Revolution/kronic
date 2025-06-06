@@ -82,3 +82,4 @@ jobs:
           else
             git commit -m "Update Helm repository and GitHub Pages for chart version ${{ steps.chart-version.outputs.version }}"
             git push
+          fi
