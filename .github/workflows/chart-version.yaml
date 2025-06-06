@@ -60,19 +60,34 @@ jobs:
         id: determine-type
         if: steps.check-version-commit.outputs.skip == 'false'
         run: |
+          # Determine the bump type
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TYPE="${{ github.event.inputs.version_type }}"
           else
             TYPE="auto"
           fi
 
+          # Debug output
+          echo "Debug: Detected TYPE='$TYPE'"
+          echo "Debug: Event name='${{ github.event_name }}'"
+          
+          # Clean and validate the type (remove any whitespace and newlines)
+          TYPE=$(echo "$TYPE" | tr -d '[:space:]' | head -1)
+          
           # Validate the type
-          if [[ "$TYPE" == "major" || "$TYPE" == "minor" || "$TYPE" == "patch" || "$TYPE" == "auto" ]]; then
-            echo "type=$TYPE" >> $GITHUB_OUTPUT
-          else
-            echo "Error: Invalid bump type '$TYPE'. Must be one of: major, minor, patch, auto."
-            exit 1
-          fi
+          case "$TYPE" in
+            major|minor|patch|auto)
+              echo "type=$TYPE" >> $GITHUB_OUTPUT
+              echo "✅ Valid bump type: $TYPE"
+              ;;
+            *)
+              echo "❌ Error: Invalid bump type '$TYPE'. Must be one of: major, minor, patch, auto."
+              echo "Debug: TYPE length: ${#TYPE}"
+              echo "Debug: TYPE hex dump:"
+              echo "$TYPE" | od -c
+              exit 1
+              ;;
+          esac
 
       - name: Bump chart version
         id: bump
@@ -85,8 +100,18 @@ jobs:
             | awk '{print $2}' | tr -d '"')
           echo "previous-version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
-          # Perform version bump
-          ./scripts/bump-chart-version.sh ${{ steps.determine-type.outputs.type }}
+          # Get the validated bump type
+          BUMP_TYPE="${{ steps.determine-type.outputs.type }}"
+          echo "Debug: About to call script with bump type: '$BUMP_TYPE'"
+          
+          # Validate that we have a bump type (double check)
+          if [[ -z "$BUMP_TYPE" ]]; then
+            echo "❌ Error: Bump type is empty"
+            exit 1
+          fi
+
+          # Perform version bump with quoted argument
+          ./scripts/bump-chart-version.sh "$BUMP_TYPE"
 
           # Get new version after bump
           NEW_VERSION=$(grep "^version:" chart/kronic/Chart.yaml \
