@@ -1,12 +1,12 @@
 name: Build Helm Repository
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'chart/**'
-      - '.github/workflows/helm-release.yaml'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'chart/**'
+  #     - '.github/workflows/helm-release.yaml'
   workflow_dispatch:
   workflow_call:
     inputs:
