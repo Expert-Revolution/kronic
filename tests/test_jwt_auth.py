@@ -109,6 +109,11 @@ class TestJWTAuthentication:
         """Test brute force protection mechanism."""
         identifier = "test@example.com"
         
+        # Skip this test if Redis is not available
+        from jwt_auth import redis_client
+        if not redis_client:
+            pytest.skip("Redis not available for brute force protection testing")
+        
         # Initially should not be blocked
         assert BruteForceProtection.is_blocked(identifier) is False
         
@@ -137,7 +142,8 @@ class TestJWTAuthentication:
         mock_user.id = "test-user-id"
         mock_user.email = "test@example.com"
         mock_user.is_active = True
-        mock_user.last_login = datetime.utcnow()
+        mock_user.is_verified = False  # Set explicit value instead of mock
+        mock_user.last_login = datetime.now().astimezone()
         mock_auth.return_value = mock_user
         
         # Test login
@@ -203,6 +209,22 @@ class TestJWTAuthentication:
         data = json.loads(response.data)
         assert 'error' in data
         assert 'details' in data
+    
+    def test_unauthenticated_redirect_to_login(self):
+        """Test that unauthenticated web requests redirect to login."""
+        # Mock no authentication configured (to test redirect behavior)
+        with patch('config.USERS', {}), patch('config.DATABASE_ENABLED', True):
+            response = self.client.get('/')
+            assert response.status_code == 302
+            assert '/login' in response.location
+    
+    def test_api_requests_return_401_when_unauthenticated(self):
+        """Test that API requests return 401 when unauthenticated."""
+        # Test API endpoint without authentication
+        response = self.client.get('/api/auth/profile')
+        assert response.status_code == 401
+        data = json.loads(response.data)
+        assert 'error' in data
 
 
 if __name__ == '__main__':

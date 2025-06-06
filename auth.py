@@ -190,6 +190,41 @@ class UserManager:
         finally:
             session.close()
 
+    @staticmethod
+    def update_password(email: str, new_password_hash: str) -> bool:
+        """Update user password.
+        
+        Args:
+            email: User email address
+            new_password_hash: New hashed password (already hashed with bcrypt)
+            
+        Returns:
+            True if password updated successfully, False otherwise
+        """
+        if not is_database_available():
+            return False
+            
+        try:
+            session_gen = get_session()
+            session = next(session_gen)
+            
+            user = session.query(User).filter(User.email == email).first()
+            if user:
+                user.password_hash = new_password_hash
+                session.commit()
+                log.info(f"Password updated for user: {email}")
+                return True
+            else:
+                log.warning(f"User not found for password update: {email}")
+                return False
+                
+        except Exception as e:
+            log.error(f"Error updating password for user {email}: {e}")
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
 
 class RoleManager:
     """Manages role operations."""

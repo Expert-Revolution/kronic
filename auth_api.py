@@ -232,8 +232,10 @@ def change_password():
     
     # Update password
     new_hashed_password = SecurePasswordManager.hash_password(new_password)
-    # Note: You would need to add an update_password method to UserManager
-    # For now, this is a placeholder
+    success = UserManager.update_password(user_email, new_hashed_password)
+    
+    if not success:
+        return jsonify({'error': 'Failed to update password'}), 500
     
     log.info(f"Password changed for user: {user_email}")
     

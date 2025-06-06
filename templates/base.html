@@ -31,11 +31,78 @@
     </ul>
     <ul>
       <li><a href="https://github.com/mshade/kronic">GitHub</a></li>
+      <li x-data="authStatus()" x-init="checkAuthStatus()">
+        <span x-show="!isAuthenticated">
+          <a href="/login">Login</a>
+        </span>
+        <span x-show="isAuthenticated" style="display: none;">
+          <span x-text="userEmail" style="margin-right: 10px;"></span>
+          <a href="#" @click="logout()">Logout</a>
+        </span>
+      </li>
     </ul>
   </nav>
   <main class="container">
     {% block content %} {% endblock %}
   </main>
+
+  <script>
+    function authStatus() {
+      return {
+        isAuthenticated: false,
+        userEmail: '',
+        
+        async checkAuthStatus() {
+          const token = localStorage.getItem('authToken');
+          if (!token) {
+            this.isAuthenticated = false;
+            return;
+          }
+          
+          try {
+            const response = await fetch('/api/auth/check-auth', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              this.isAuthenticated = data.authenticated;
+              this.userEmail = data.user?.email || '';
+            } else {
+              this.isAuthenticated = false;
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('refreshToken');
+            }
+          } catch (error) {
+            this.isAuthenticated = false;
+          }
+        },
+        
+        async logout() {
+          const token = localStorage.getItem('authToken');
+          if (token) {
+            try {
+              await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+            } catch (error) {
+              console.error('Logout error:', error);
+            }
+          }
+          
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          this.isAuthenticated = false;
+          window.location.href = '/login';
+        }
+      }
+    }
+  </script>
 </body>
 
 </html>

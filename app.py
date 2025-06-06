@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, jsonify
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
 
@@ -298,8 +298,17 @@ def auth_required(f):
                 }
                 return f(*args, **kwargs)
         
-        # Fallback to HTTP Basic Auth for backward compatibility
-        return auth.login_required(f)(*args, **kwargs)
+        # Check if this is an API request
+        if request.path.startswith('/api/') or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # For web requests, redirect to login page instead of basic auth
+        if not config.USERS and not config.DATABASE_ENABLED:
+            # No authentication configured, allow access
+            return f(*args, **kwargs)
+        
+        # Redirect to login page for web requests
+        return redirect(url_for('login_page'))
     
     return decorated_function
 
