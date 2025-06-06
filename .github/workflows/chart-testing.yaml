@@ -79,7 +79,7 @@ jobs:
             git add .cr-index/index.yaml
             git commit -m "Initialize gh-pages branch for Helm chart repository"
             git push origin gh-pages
-            git checkout -
+            git checkout main
           else
             echo "gh-pages branch already exists"
           fi
