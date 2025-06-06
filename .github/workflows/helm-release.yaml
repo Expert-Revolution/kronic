@@ -67,14 +67,18 @@ jobs:
           helm repo index docs/charts --url https://davides93.github.io/kronic/charts
           cp docs/charts/index.yaml docs/index.yaml
 
+      - name: Update GitHub Pages with version information
+        run: |
+          chmod +x ./scripts/update-pages-version.sh
+          ./scripts/update-pages-version.sh
+
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add docs/charts/ docs/index.yaml
+          git add docs/charts/ docs/index.yaml docs/index.html
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update Helm repository for chart version ${{ steps.chart-version.outputs.version }} [skip ci]"
+            git commit -m "Update Helm repository and GitHub Pages for chart version ${{ steps.chart-version.outputs.version }}"
             git push
-          fi
