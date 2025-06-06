@@ -168,6 +168,7 @@ on:
 1. **Version Not Bumping**: Check if commit messages contain version bump indicators
 2. **Failed Releases**: Verify GitHub token permissions and branch protection rules
 3. **Duplicate Tags**: Ensure no manual tags conflict with automated ones
+4. **GitHub Pages Not Updating**: Check if the pages workflow was triggered after Helm repository updates
 
 ### Manual Intervention
 
@@ -177,6 +178,9 @@ If automation fails, you can manually:
 # Bump version
 ./scripts/bump-chart-version.sh patch
 
+# Update GitHub Pages version information
+./scripts/update-pages-version.sh
+
 # Create tag
 git tag -a kronic-chart-0.1.8 -m "Release version 0.1.8"
 git push origin kronic-chart-0.1.8
@@ -184,6 +188,36 @@ git push origin kronic-chart-0.1.8
 # Create release via GitHub CLI
 gh release create kronic-chart-0.1.8 --title "Helm Chart v0.1.8"
 ```
+
+## GitHub Pages Integration
+
+The versioning system is integrated with GitHub Pages to automatically:
+
+1. **Update Helm Repository**: When a new chart version is created, the `index.yaml` file in the GitHub Pages site is automatically updated with the new chart metadata
+2. **Display Version Information**: The `/kronic/index.html` page shows current version information including:
+   - Current chart version
+   - Current app version  
+   - Last updated date
+3. **Trigger Deployment**: Updates to the documentation automatically trigger GitHub Pages deployment
+
+### Workflow Integration
+
+The complete automation workflow:
+
+1. **Version Bump**: `chart-version.yaml` workflow detects changes and bumps the chart version
+2. **Release Creation**: Creates a GitHub release with the packaged chart
+3. **Helm Repository Update**: `helm-release.yaml` workflow updates the Helm repository index
+4. **GitHub Pages Update**: Version information is updated on the GitHub Pages site
+5. **Deployment**: GitHub Pages automatically deploys the updated site
+
+### Version Update Script
+
+The `scripts/update-pages-version.sh` script automatically:
+
+- Reads current version information from `chart/kronic/Chart.yaml`
+- Updates the GitHub Pages `index.html` with current release information
+- Maintains existing content while updating the version display
+- Handles both new installations and updates to existing version sections
 
 ## Support
 
@@ -199,3 +233,4 @@ For questions or issues with the versioning system:
 - **2024-12-27**: Initial versioning strategy documentation
 - **2024-12-27**: Automated version bumping implementation
 - **2024-12-27**: GitHub Actions integration for releases
+- **2025-06-06**: Added GitHub Pages integration and automated version display
