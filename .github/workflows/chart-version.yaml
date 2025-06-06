@@ -1,3 +1,4 @@
+---
 name: Chart Version Management
 
 on:
@@ -47,7 +48,8 @@ jobs:
       - name: Check if this is a version bump commit
         id: check-version-commit
         run: |
-          if [[ "${{ github.event.head_commit.message }}" =~ ^(Bump chart version|Update chart version) ]]; then
+          commit_msg="${{ github.event.head_commit.message }}"
+          if [[ "$commit_msg" =~ ^(Bump chart version|Update chart version) ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "This is a version bump commit, skipping to avoid infinite loop"
           else
@@ -70,16 +72,18 @@ jobs:
         if: steps.check-version-commit.outputs.skip == 'false'
         run: |
           chmod +x ./scripts/bump-chart-version.sh
-          
+
           # Get current version before bump
-          PREVIOUS_VERSION=$(grep "^version:" chart/kronic/Chart.yaml | awk '{print $2}' | tr -d '"')
+          PREVIOUS_VERSION=$(grep "^version:" chart/kronic/Chart.yaml \
+            | awk '{print $2}' | tr -d '"')
           echo "previous-version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Perform version bump
           ./scripts/bump-chart-version.sh ${{ steps.determine-type.outputs.type }}
-          
+
           # Get new version after bump
-          NEW_VERSION=$(grep "^version:" chart/kronic/Chart.yaml | awk '{print $2}' | tr -d '"')
+          NEW_VERSION=$(grep "^version:" chart/kronic/Chart.yaml \
+            | awk '{print $2}' | tr -d '"')
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check for changes
@@ -98,7 +102,9 @@ jobs:
         if: steps.check-changes.outputs.version-changed == 'true'
         run: |
           git add chart/kronic/Chart.yaml
-          git commit -m "Bump chart version from ${{ steps.bump.outputs.previous-version }} to ${{ steps.bump.outputs.new-version }}"
+          git commit -m "Bump chart version from \
+            ${{ steps.bump.outputs.previous-version }} to \
+            ${{ steps.bump.outputs.new-version }}"
           git push
 
   create-release:
@@ -130,14 +136,14 @@ jobs:
           # Create tag for the new version
           NEW_VERSION="${{ needs.bump-version.outputs.new-version }}"
           TAG_NAME="kronic-chart-${NEW_VERSION}"
-          
+
           git tag -a "$TAG_NAME" -m "Release Helm chart version $NEW_VERSION"
           git push origin "$TAG_NAME"
-          
+
           # Package the chart
           mkdir -p .cr-release-packages
           helm package chart/kronic -d .cr-release-packages
-          
+
           echo "Created tag: $TAG_NAME"
           echo "Packaged chart version: $NEW_VERSION"
 
@@ -148,17 +154,20 @@ jobs:
           name: "Helm Chart v${{ needs.bump-version.outputs.new-version }}"
           body: |
             ## Helm Chart Release v${{ needs.bump-version.outputs.new-version }}
-            
+
             ### Changes
-            - Chart version bumped from ${{ needs.bump-version.outputs.previous-version }} to ${{ needs.bump-version.outputs.new-version }}
-            
+            - Chart version bumped from \
+              ${{ needs.bump-version.outputs.previous-version }} to \
+              ${{ needs.bump-version.outputs.new-version }}
+
             ### Installation
             ```bash
             helm repo add kronic https://davides93.github.io/kronic/charts
             helm repo update
-            helm install my-kronic kronic/kronic --version ${{ needs.bump-version.outputs.new-version }}
+            helm install my-kronic kronic/kronic \
+              --version ${{ needs.bump-version.outputs.new-version }}
             ```
-            
+
             ### Files
             - kronic-${{ needs.bump-version.outputs.new-version }}.tgz
           files: |
@@ -190,31 +199,32 @@ jobs:
           NEW_VERSION="${{ needs.bump-version.outputs.new-version }}"
           PREV_VERSION="${{ needs.bump-version.outputs.previous-version }}"
           DATE=$(date +%Y-%m-%d)
-          
+
           # Create temporary file with new changelog entry
           cat > /tmp/new_changelog.md << EOF
           # Change Log
-          
+
           All notable changes to this project will be documented in this file.
-          
+
           The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
           and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-          
+
           ## [${NEW_VERSION}] - ${DATE}
-          
+
           ### Changed
           - Updated Helm chart version from ${PREV_VERSION} to ${NEW_VERSION}
-          
+
           EOF
-          
+
           # Append existing changelog content (skip the header)
           tail -n +8 CHANGELOG.md >> /tmp/new_changelog.md
-          
+
           # Replace the original file
           mv /tmp/new_changelog.md CHANGELOG.md
 
       - name: Commit changelog update
         run: |
           git add CHANGELOG.md
-          git commit -m "Update CHANGELOG.md for chart version ${{ needs.bump-version.outputs.new-version }}"
+          git commit -m "Update CHANGELOG.md for chart version \
+            ${{ needs.bump-version.outputs.new-version }}"
           git push
