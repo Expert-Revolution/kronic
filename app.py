@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect
+from flask import Flask, request, render_template, redirect, url_for, jsonify
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
 
@@ -25,8 +25,18 @@ from kron import (
     _interpret_cron_schedule,
 )
 
+# Import JWT authentication components
+from jwt_auth import init_limiter, optional_jwt, jwt_required
+from auth_api import auth_bp
+
 app = Flask(__name__, static_url_path="", static_folder="static")
 auth = HTTPBasicAuth()
+
+# Initialize rate limiter
+limiter = init_limiter(app)
+
+# Register authentication blueprint
+app.register_blueprint(auth_bp)
 
 # Setup logger for Flask app
 log = logging.getLogger("app.flask")
@@ -242,9 +252,70 @@ def healthz():
     return health_status, status_code
 
 
+# Authentication routes
+@app.route("/login")
+def login_page():
+    """Render the login page."""
+    return render_template('login.html')
+
+@app.route("/logout")
+def logout_page():
+    """Handle logout and redirect to login."""
+    response = redirect(url_for('login_page'))
+    response.set_cookie('access_token', '', expires=0)
+    response.set_cookie('refresh_token', '', expires=0)
+    return response
+
+
+# Authentication wrapper that supports both JWT and Basic Auth
+def auth_required(f):
+    """Authentication decorator that supports both JWT and HTTP Basic Auth."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # First try JWT authentication
+        from jwt_auth import JWTManager
+        
+        token = None
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            try:
+                token = auth_header.split(' ')[1]
+            except IndexError:
+                pass
+        
+        # Get token from cookies as fallback
+        if not token:
+            token = request.cookies.get('access_token')
+        
+        if token:
+            payload = JWTManager.verify_token(token)
+            if payload:
+                # Add user info to request context for JWT
+                request.current_user = {
+                    'user_id': payload['user_id'],
+                    'email': payload['email']
+                }
+                return f(*args, **kwargs)
+        
+        # Check if this is an API request
+        if request.path.startswith('/api/') or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # For web requests, redirect to login page instead of basic auth
+        if not config.USERS and not config.DATABASE_ENABLED:
+            # No authentication configured, allow access
+            return f(*args, **kwargs)
+        
+        # Redirect to login page for web requests
+        return redirect(url_for('login_page'))
+    
+    return decorated_function
+
+
 @app.route("/")
 @app.route("/namespaces/")
-@auth.login_required
+@auth_required
 def index():
     if config.NAMESPACE_ONLY:
         return redirect(
@@ -263,7 +334,7 @@ def index():
 
 @app.route("/namespaces/<namespace>")
 @namespace_filter
-@auth.login_required
+@auth_required
 def view_namespace(namespace):
     cronjobs = get_cronjobs(namespace)
     cronjobs_with_details = []
@@ -300,7 +371,7 @@ def view_namespace(namespace):
 
 @app.route("/namespaces/<namespace>/cronjobs/<cronjob_name>", methods=["GET", "POST"])
 @namespace_filter
-@auth.login_required
+@auth_required
 def view_cronjob(namespace, cronjob_name):
     validation_error = None
 
@@ -427,7 +498,7 @@ def view_cronjob(namespace, cronjob_name):
 
 @app.route("/namespaces/<namespace>/cronjobs/<cronjob_name>/details")
 @namespace_filter
-@auth.login_required
+@auth_required
 def view_cronjob_details(namespace, cronjob_name):
     """View cronjob details in read-only mode"""
     cronjob = get_cronjob(namespace, cronjob_name)
@@ -445,7 +516,7 @@ def view_cronjob_details(namespace, cronjob_name):
 
 
 @app.route("/api/")
-@auth.login_required
+@auth_required
 def api_index():
     if config.NAMESPACE_ONLY:
         return redirect(
@@ -460,7 +531,7 @@ def api_index():
 @app.route("/api/namespaces/<namespace>/cronjobs")
 @app.route("/api/namespaces/<namespace>")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_namespace(namespace):
     cronjobs = get_cronjobs(namespace)
     return cronjobs
@@ -468,7 +539,7 @@ def api_namespace(namespace):
 
 @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_get_cronjob(namespace, cronjob_name):
     cronjob = get_cronjob(namespace, cronjob_name)
     return cronjob
@@ -476,7 +547,7 @@ def api_get_cronjob(namespace, cronjob_name):
 
 @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_get_cronjob_yaml(namespace, cronjob_name):
     """Get cronjob as YAML string for editor"""
     cronjob = get_cronjob(namespace, cronjob_name)
@@ -493,7 +564,7 @@ def api_get_cronjob_yaml(namespace, cronjob_name):
     "/api/namespaces/<namespace>/cronjobs/<cronjob_name>/clone", methods=["POST"]
 )
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_clone_cronjob(namespace, cronjob_name):
     log.info(f"Cloning cronjob '{cronjob_name}' in namespace '{namespace}'")
     cronjob_spec = get_cronjob(namespace, cronjob_name)
@@ -517,7 +588,7 @@ def api_clone_cronjob(namespace, cronjob_name):
 
 @app.route("/api/namespaces/<namespace>/cronjobs/create", methods=["POST"])
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_create_cronjob(namespace):
     log.info(f"Creating cronjob in namespace '{namespace}'")
     cronjob_spec = request.json["data"]
@@ -539,7 +610,7 @@ def api_create_cronjob(namespace):
     "/api/namespaces/<namespace>/cronjobs/<cronjob_name>/delete", methods=["POST"]
 )
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_delete_cronjob(namespace, cronjob_name):
     log.info(f"Deleting cronjob '{cronjob_name}' in namespace '{namespace}'")
     deleted = delete_cronjob(namespace, cronjob_name)
@@ -559,7 +630,7 @@ def api_delete_cronjob(namespace, cronjob_name):
     methods=["GET", "POST"],
 )
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_toggle_cronjob_suspend(namespace, cronjob_name):
     if request.method == "GET":
         """Return the suspended status of the <cronjob_name>"""
@@ -590,7 +661,7 @@ def api_toggle_cronjob_suspend(namespace, cronjob_name):
     "/api/namespaces/<namespace>/cronjobs/<cronjob_name>/trigger", methods=["POST"]
 )
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_trigger_cronjob(namespace, cronjob_name):
     """Manually trigger a job from <cronjob_name>"""
     log.info(f"Triggering cronjob '{cronjob_name}' in namespace '{namespace}'")
@@ -611,7 +682,7 @@ def api_trigger_cronjob(namespace, cronjob_name):
 
 @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/getJobs")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_get_jobs(namespace, cronjob_name):
     jobs = get_jobs_and_pods(namespace, cronjob_name)
     return jobs
@@ -619,7 +690,7 @@ def api_get_jobs(namespace, cronjob_name):
 
 @app.route("/api/namespaces/<namespace>/pods")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_get_pods(namespace):
     pods = get_pods(namespace)
     return pods
@@ -627,7 +698,7 @@ def api_get_pods(namespace):
 
 @app.route("/api/namespaces/<namespace>/pods/<pod_name>/logs")
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_get_pod_logs(namespace, pod_name):
     logs = get_pod_logs(namespace, pod_name)
     return logs
@@ -635,7 +706,7 @@ def api_get_pod_logs(namespace, pod_name):
 
 @app.route("/api/namespaces/<namespace>/jobs/<job_name>/delete", methods=["POST"])
 @namespace_filter
-@auth.login_required
+@auth_required
 def api_delete_job(namespace, job_name):
     log.info(f"Deleting job '{job_name}' in namespace '{namespace}'")
     deleted = delete_job(namespace, job_name)
