@@ -1,0 +1,22 @@
+apiVersion: v1
+entries:
+  kronic:
+  - annotations:
+      artifacthub.io/category: monitoring-logging
+      versioning: automated
+    apiVersion: v2
+    appVersion: v0.1.4
+    created: "2025-06-06T10:45:31.04872498Z"
+    description: Kronic - The simple Kubernetes CronJob Admin UI
+    digest: 3b7220d6dcb097eeb3cb9495b7571c36a6353be07c70eb43c26555f06fc786dd
+    home: https://github.com/davides93/kronic
+    maintainers:
+    - email: davides93@users.noreply.github.com
+      name: davides93
+      url: https://github.com/davides93
+    name: kronic
+    type: application
+    urls:
+    - https://github.com/davides93/kronic/releases/download/kronic-chart-0.1.8/kronic-0.1.8.tgz
+    version: 0.1.8
+generated: "2025-06-06T10:45:31.048734397Z"
