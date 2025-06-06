@@ -34,7 +34,19 @@ log = logging.getLogger("app.flask")
 
 @auth.verify_password
 def verify_password(username, password):
-    # No users defined, so no auth enabled
+    # Try database authentication first if available
+    if config.DATABASE_ENABLED:
+        try:
+            from auth import UserManager
+            # For compatibility, treat username as email for database lookup
+            user = UserManager.authenticate_user(username, password)
+            if user:
+                log.info(f"User '{username}' authenticated successfully via database")
+                return username
+        except Exception as e:
+            log.error(f"Database authentication failed for user '{username}': {e}")
+    
+    # Fall back to environment variable authentication
     if not config.USERS:
         log.debug("Authentication bypassed - no users configured")
         return True
@@ -42,7 +54,7 @@ def verify_password(username, password):
         if username in config.USERS and check_password_hash(
             config.USERS.get(username), password
         ):
-            log.info(f"User '{username}' authenticated successfully")
+            log.info(f"User '{username}' authenticated successfully via environment variables")
             return username
         else:
             log.warning(f"Authentication failed for user '{username}'")
@@ -201,7 +213,33 @@ def _strip_immutable_fields(spec):
 
 @app.route("/healthz")
 def healthz():
-    return {"status": "ok"}
+    health_status = {"status": "ok", "components": {}}
+    
+    # Check database health if enabled
+    if config.DATABASE_ENABLED:
+        try:
+            from database import check_database_health
+            db_health = check_database_health()
+            health_status["components"]["database"] = db_health
+            
+            # Set overall status to unhealthy if database is unhealthy
+            if db_health.get("status") != "healthy":
+                health_status["status"] = "degraded"
+        except Exception as e:
+            health_status["components"]["database"] = {
+                "status": "unhealthy",
+                "error": f"Health check failed: {e}"
+            }
+            health_status["status"] = "degraded"
+    else:
+        health_status["components"]["database"] = {
+            "status": "disabled",
+            "message": "Database not configured"
+        }
+    
+    # Return appropriate HTTP status code
+    status_code = 200 if health_status["status"] == "ok" else 503
+    return health_status, status_code
 
 
 @app.route("/")

@@ -19,7 +19,7 @@ logging.basicConfig(
 
 log = logging.getLogger("app.config")
 
-## Configuration Setings
+## Configuration Settings
 # Admin Password. Auth disabled if unset
 ADMIN_PASSWORD = os.environ.get("KRONIC_ADMIN_PASSWORD", None)
 ADMIN_USERNAME = os.environ.get("KRONIC_ADMIN_USERNAME", "kronic")
@@ -33,11 +33,28 @@ NAMESPACE_ONLY = os.environ.get("KRONIC_NAMESPACE_ONLY", False)
 # Boolean of whether this is a test environment, disables kubeconfig setup
 TEST = os.environ.get("KRONIC_TEST", False)
 
+# Database configuration
+DATABASE_ENABLED = False
+
 
 ## Config Logic
 USERS = {}
 if ADMIN_PASSWORD:
     USERS = {ADMIN_USERNAME: generate_password_hash(ADMIN_PASSWORD)}
+
+# Initialize database if not in test mode
+if not TEST:
+    try:
+        from database import init_database, is_database_available
+        DATABASE_ENABLED = init_database()
+        if DATABASE_ENABLED:
+            log.info("Database initialized successfully")
+        else:
+            log.info("Database not configured, using environment variable authentication")
+    except ImportError:
+        log.warning("Database modules not available")
+    except Exception as e:
+        log.error(f"Database initialization failed: {e}")
 
 # Set allowed namespaces to the installed namespace only
 if NAMESPACE_ONLY:

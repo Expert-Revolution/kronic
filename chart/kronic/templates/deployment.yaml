@@ -45,6 +45,23 @@ spec:
             - name: KRONIC_ADMIN_USERNAME
               value: {{ .Values.auth.adminUsername | quote }}
             {{- end }}
+            {{- if .Values.database.enabled }}
+            - name: KRONIC_DATABASE_HOST
+              value: {{ include "kronic.fullname" . }}-postgres
+            - name: KRONIC_DATABASE_PORT
+              value: "5432"
+            - name: KRONIC_DATABASE_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: KRONIC_DATABASE_USER
+              value: {{ .Values.database.user | quote }}
+            - name: KRONIC_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret | default (printf "%s-postgres" (include "kronic.fullname" .)) }}
+                  key: {{ .Values.database.existingSecretKey }}
+            - name: KRONIC_ADMIN_EMAIL
+              value: {{ .Values.database.adminEmail | quote }}
+            {{- end }}
             {{- range $name, $item := .Values.env }}
             - name: {{ $name }}
               value: {{ $item | quote }}
