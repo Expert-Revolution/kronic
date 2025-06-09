@@ -6,7 +6,25 @@ entries:
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:22:52.715769466Z"
+    created: "2025-06-09T20:42:25.634785782Z"
+    description: Kronic - The simple Kubernetes CronJob Admin UI
+    digest: a5004b738c6a82dbf6a69b4e2c7f7a06e6fe34dfea3260a0d8034864604a7911
+    home: https://github.com/davides93/kronic
+    maintainers:
+    - email: davides93@users.noreply.github.com
+      name: davides93
+      url: https://github.com/davides93
+    name: kronic
+    type: application
+    urls:
+    - https://davides93.github.io/kronic/charts/kronic-1.1.1.tgz
+    version: 1.1.1
+  - annotations:
+      artifacthub.io/category: monitoring-logging
+      versioning: automated
+    apiVersion: v2
+    appVersion: v0.1.4
+    created: "2025-06-09T20:42:25.634211769Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 97340e56075e77d197dbfe785fda54b963673367246f8e2a9067bb7105665c45
     home: https://github.com/davides93/kronic
@@ -24,7 +42,7 @@ entries:
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:22:52.714146623Z"
+    created: "2025-06-09T20:42:25.633676728Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 2fbd59606d1653490e6c4f00d751c5dc941701eeeb882938f4ace3048de8395c
     home: https://github.com/davides93/kronic
@@ -42,7 +60,7 @@ entries:
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:22:52.713540419Z"
+    created: "2025-06-09T20:42:25.63313246Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 4ace907cc48cce65561d30c2471392b29eb2c1c2ddeeab0c29c525d53f553305
     home: https://github.com/davides93/kronic
@@ -59,7 +77,7 @@ entries:
       artifacthub.io/category: monitoring-logging
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:22:52.712962446Z"
+    created: "2025-06-09T20:42:25.632571631Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: ac9ad0afe1f06fa8dc470c7df5ff9fe8c1b36f3087c1782db9e6c274ed4da4ed
     home: https://github.com/davides93/kronic
@@ -72,4 +90,4 @@ entries:
     urls:
     - https://davides93.github.io/kronic/charts/kronic-0.1.7.tgz
     version: 0.1.7
-generated: "2025-06-09T20:22:52.712246386Z"
+generated: "2025-06-09T20:42:25.631869127Z"
