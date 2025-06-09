@@ -15,6 +15,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    profiles:
+      - full
+
   kronic:
     build:
       context: .
@@ -31,6 +45,8 @@ services:
       KRONIC_DATABASE_PASSWORD: kronic123
       # Admin user for seeding
       KRONIC_ADMIN_EMAIL: admin@example.com
+      # Redis configuration (optional - Redis service uses profile 'full')
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - .:/app
       # Mount the entire .kube directory for proper kubernetes configuration
@@ -45,6 +61,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 # networks:
 #   k3d-kronic-localdev:

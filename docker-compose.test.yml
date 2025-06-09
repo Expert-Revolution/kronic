@@ -1,0 +1,60 @@
+services:
+  postgres-test:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: kronic_test
+      POSTGRES_USER: kronic_test
+      POSTGRES_PASSWORD: kronic_test123
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kronic_test -d kronic_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  kronic-test:
+    build:
+      context: .
+      target: dev
+    environment:
+      # Test database configuration
+      KRONIC_DATABASE_HOST: postgres-test
+      KRONIC_DATABASE_PORT: 5432
+      KRONIC_DATABASE_NAME: kronic_test
+      KRONIC_DATABASE_USER: kronic_test
+      KRONIC_DATABASE_PASSWORD: kronic_test123
+      # Redis configuration for testing
+      REDIS_URL: redis://redis-test:6379/0
+      # Test-specific settings
+      KRONIC_ALLOW_NAMESPACES: ""
+      KRONIC_ADMIN_PASSWORD: "test_password"
+      FLASK_ENV: testing
+      # Disable rate limiting for tests
+      RATE_LIMIT_ENABLED: "false"
+    volumes:
+      - .:/app
+      - ./tests:/app/tests
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: python -m pytest tests/ -v
+    profiles:
+      - test
+
+volumes:
+  postgres_test_data:
