@@ -57,7 +57,7 @@ update_index_html() {
         # Update existing version info section
         sed '/<!-- VERSION_INFO_START -->/,/<!-- VERSION_INFO_END -->/c\
         <!-- VERSION_INFO_START -->\
-        <div class="version-info" style="background: #e8f4fd; border: 1px solid #b8daf6; border-radius: 8px; padding: 15px; margin: 20px 0;">\
+        <div class="version-info" style="background: #e8f4fd; border: 1px solid #b8daf6; border-radius: 8px; padding: 15px; margin: 20px 0; color: #2c3e50;">\
             <h4 style="margin: 0 0 10px 0; color: #2c3e50;">📦 Current Release Information</h4>\
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">\
                 <div><strong>Chart Version:</strong> <span class="badge" style="background: #28a745;">v'"$chart_version"'</span></div>\
@@ -73,7 +73,7 @@ update_index_html() {
                 a\
 \
     <!-- VERSION_INFO_START -->\
-    <div class="version-info" style="background: #e8f4fd; border: 1px solid #b8daf6; border-radius: 8px; padding: 15px; margin: 20px 0;">\
+    <div class="version-info" style="background: #e8f4fd; border: 1px solid #b8daf6; border-radius: 8px; padding: 15px; margin: 20px 0; color: #2c3e50;">\
         <h4 style="margin: 0 0 10px 0; color: #2c3e50;">📦 Current Release Information</h4>\
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">\
             <div><strong>Chart Version:</strong> <span class="badge" style="background: #28a745;">v'"$chart_version"'</span></div>\
