@@ -132,7 +132,10 @@ class TestJWTAuthentication:
         """Test that login page renders correctly."""
         response = self.client.get('/login')
         assert response.status_code == 200
-        assert b'Login to Kronic' in response.data
+        # Check for React mount point instead of static text
+        assert b'login-root' in response.data
+        # Check for React script inclusion
+        assert b'/dist/login.js' in response.data
     
     @patch('auth_api.UserManager.authenticate_user')
     def test_login_api_success(self, mock_auth):
