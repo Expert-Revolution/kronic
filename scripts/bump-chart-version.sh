@@ -64,17 +64,14 @@ bump_version() {
 
 # Function to auto-detect version bump type from recent commits
 auto_detect_bump_type() {
-    # Get commits since last chart change (or last 10 commits)
-    local commits=$(git log --oneline --max-count=10 --grep="BREAKING\|breaking" --grep="feat\|feature\|add" --grep="fix\|bug" --extended-regexp)
-    
     # Check for breaking changes (major)
-    if git log --oneline --max-count=10 | grep -i -E "(BREAKING|breaking.*change)"; then
+    if git log --oneline --max-count=10 | grep -i -E "(BREAKING|breaking.*change)" >/dev/null 2>&1; then
         echo "major"
         return
     fi
     
     # Check for new features (minor)
-    if git log --oneline --max-count=10 | grep -i -E "(feat|feature|add.*feature)"; then
+    if git log --oneline --max-count=10 | grep -i -E "(feat|feature|add.*feature)" >/dev/null 2>&1; then
         echo "minor"
         return
     fi
