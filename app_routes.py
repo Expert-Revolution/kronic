@@ -134,31 +134,32 @@ def _strip_immutable_fields(spec):
 def healthz():
     """Legacy health check endpoint."""
     from app.core.config import DATABASE_ENABLED
-    
+
     health_status = {"status": "ok", "components": {}}
-    
+
     # Check database health if enabled
     if DATABASE_ENABLED:
         try:
             from app.core.database import check_database_health
+
             db_health = check_database_health()
             health_status["components"]["database"] = db_health
-            
+
             # Set overall status to unhealthy if database is unhealthy
             if db_health.get("status") != "healthy":
                 health_status["status"] = "degraded"
         except Exception as e:
             health_status["components"]["database"] = {
                 "status": "unhealthy",
-                "error": f"Health check failed: {e}"
+                "error": f"Health check failed: {e}",
             }
             health_status["status"] = "degraded"
     else:
         health_status["components"]["database"] = {
             "status": "disabled",
-            "message": "Database not configured"
+            "message": "Database not configured",
         }
-    
+
     # Return appropriate HTTP status code
     status_code = 200 if health_status["status"] == "ok" else 503
     return health_status, status_code
@@ -166,7 +167,7 @@ def healthz():
 
 def register_legacy_routes(app, auth):
     """Register all legacy routes for backward compatibility."""
-    
+
     # Import necessary modules
     try:
         from kron import (
@@ -188,18 +189,19 @@ def register_legacy_routes(app, auth):
         # For tests or when kron module is not available
         log.warning("kron module not available, some routes may not work")
         return
-    
+
     @app.route("/healthz")
     def healthz_route():
         """Legacy health check endpoint."""
         return healthz()
-    
+
     @app.route("/")
     @app.route("/namespaces/")
     @auth_required
     def index():
         """Main index page."""
         from app.core.config import NAMESPACE_ONLY, KRONIC_NAMESPACE
+
         if NAMESPACE_ONLY:
             return redirect(
                 f"/namespaces/{KRONIC_NAMESPACE}",
@@ -210,10 +212,12 @@ def register_legacy_routes(app, auth):
         namespaces = {}
         # Count cronjobs per namespace
         for cronjob in cronjobs:
-            namespaces[cronjob["namespace"]] = namespaces.get(cronjob["namespace"], 0) + 1
+            namespaces[cronjob["namespace"]] = (
+                namespaces.get(cronjob["namespace"], 0) + 1
+            )
 
         return render_template("index.html", namespaces=namespaces)
-    
+
     @app.route("/namespaces/<namespace>")
     @namespace_filter
     @auth_required
@@ -232,7 +236,7 @@ def register_legacy_routes(app, auth):
         return render_template(
             "namespace.html", cronjobs=cronjobs_with_details, namespace=namespace
         )
-    
+
     @app.route("/namespaces/<namespace>/cronjobs/<cronjob_name>/details")
     @namespace_filter
     @auth_required
@@ -251,8 +255,10 @@ def register_legacy_routes(app, auth):
                 cronjob_name=cronjob_name,
             )
         else:
-            return redirect(f"/namespaces/{namespace}/cronjobs/{cronjob_name}", code=302)
-    
+            return redirect(
+                f"/namespaces/{namespace}/cronjobs/{cronjob_name}", code=302
+            )
+
     # Register all the API endpoints that were in the original app.py
     @app.route("/api/namespaces/<namespace>/cronjobs")
     @namespace_filter
@@ -261,12 +267,12 @@ def register_legacy_routes(app, auth):
         """Get cronjobs for namespace."""
         cronjobs = get_cronjobs(namespace)
         return jsonify({"cronjobs": cronjobs})
-    
+
     # Add more legacy API routes as needed...
     # This is a minimal set to get tests working
-    
+
     log.info("Legacy routes registered successfully")
 
 
 # Export functions that tests expect to import
-__all__ = ['_validate_cronjob_yaml', '_strip_immutable_fields', 'healthz']
+__all__ = ["_validate_cronjob_yaml", "_strip_immutable_fields", "healthz"]

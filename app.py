@@ -48,6 +48,7 @@ def verify_password(username, password):
     if config.DATABASE_ENABLED:
         try:
             from auth import UserManager
+
             # For compatibility, treat username as email for database lookup
             user = UserManager.authenticate_user(username, password)
             if user:
@@ -55,7 +56,7 @@ def verify_password(username, password):
                 return username
         except Exception as e:
             log.error(f"Database authentication failed for user '{username}': {e}")
-    
+
     # Fall back to environment variable authentication
     if not config.USERS:
         log.debug("Authentication bypassed - no users configured")
@@ -64,7 +65,9 @@ def verify_password(username, password):
         if username in config.USERS and check_password_hash(
             config.USERS.get(username), password
         ):
-            log.info(f"User '{username}' authenticated successfully via environment variables")
+            log.info(
+                f"User '{username}' authenticated successfully via environment variables"
+            )
             return username
         else:
             log.warning(f"Authentication failed for user '{username}'")
@@ -224,29 +227,30 @@ def _strip_immutable_fields(spec):
 @app.route("/healthz")
 def healthz():
     health_status = {"status": "ok", "components": {}}
-    
+
     # Check database health if enabled
     if config.DATABASE_ENABLED:
         try:
             from database import check_database_health
+
             db_health = check_database_health()
             health_status["components"]["database"] = db_health
-            
+
             # Set overall status to unhealthy if database is unhealthy
             if db_health.get("status") != "healthy":
                 health_status["status"] = "degraded"
         except Exception as e:
             health_status["components"]["database"] = {
                 "status": "unhealthy",
-                "error": f"Health check failed: {e}"
+                "error": f"Health check failed: {e}",
             }
             health_status["status"] = "degraded"
     else:
         health_status["components"]["database"] = {
             "status": "disabled",
-            "message": "Database not configured"
+            "message": "Database not configured",
         }
-    
+
     # Return appropriate HTTP status code
     status_code = 200 if health_status["status"] == "ok" else 503
     return health_status, status_code
@@ -256,60 +260,65 @@ def healthz():
 @app.route("/login")
 def login_page():
     """Render the login page."""
-    return render_template('login.html')
+    return render_template("login.html")
+
 
 @app.route("/logout")
 def logout_page():
     """Handle logout and redirect to login."""
-    response = redirect(url_for('login_page'))
-    response.set_cookie('access_token', '', expires=0)
-    response.set_cookie('refresh_token', '', expires=0)
+    response = redirect(url_for("login_page"))
+    response.set_cookie("access_token", "", expires=0)
+    response.set_cookie("refresh_token", "", expires=0)
     return response
 
 
 # Authentication wrapper that supports both JWT and Basic Auth
 def auth_required(f):
     """Authentication decorator that supports both JWT and HTTP Basic Auth."""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # First try JWT authentication
         from jwt_auth import JWTManager
-        
+
         token = None
         # Get token from Authorization header
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
             try:
-                token = auth_header.split(' ')[1]
+                token = auth_header.split(" ")[1]
             except IndexError:
                 pass
-        
+
         # Get token from cookies as fallback
         if not token:
-            token = request.cookies.get('access_token')
-        
+            token = request.cookies.get("access_token")
+
         if token:
             payload = JWTManager.verify_token(token)
             if payload:
                 # Add user info to request context for JWT
                 request.current_user = {
-                    'user_id': payload['user_id'],
-                    'email': payload['email']
+                    "user_id": payload["user_id"],
+                    "email": payload["email"],
                 }
                 return f(*args, **kwargs)
-        
+
         # Check if this is an API request
-        if request.path.startswith('/api/') or request.headers.get('Content-Type') == 'application/json':
-            return jsonify({'error': 'Authentication required'}), 401
-        
+        if (
+            request.path.startswith("/api/")
+            or request.headers.get("Content-Type") == "application/json"
+        ):
+            return jsonify({"error": "Authentication required"}), 401
+
         # For web requests, redirect to login page instead of basic auth
         if not config.USERS and not config.DATABASE_ENABLED:
             # No authentication configured, allow access
             return f(*args, **kwargs)
-        
+
         # Redirect to login page for web requests
-        return redirect(url_for('login_page'))
-    
+        return redirect(url_for("login_page"))
+
     return decorated_function
 
 
@@ -553,7 +562,7 @@ def api_get_cronjob_yaml(namespace, cronjob_name):
     cronjob = get_cronjob(namespace, cronjob_name)
     if not cronjob:
         return {"error": "CronJob not found"}, 404
-    
+
     # Strip immutable fields for editing
     cronjob = _strip_immutable_fields(cronjob)
     cronjob_yaml = yaml.dump(cronjob)

@@ -233,38 +233,23 @@ def test_clean_api_object_handles_missing_timezone():
 
 def test_pod_is_owned_by():
     """Test pod ownership checking"""
-    pod = {
-        "metadata": {
-            "ownerReferences": [
-                {
-                    "name": "test-job-123",
-                    "kind": "Job"
-                }
-            ]
-        }
-    }
-    
+    pod = {"metadata": {"ownerReferences": [{"name": "test-job-123", "kind": "Job"}]}}
+
     assert kron.pod_is_owned_by(pod, "test-job-123") == True
     assert kron.pod_is_owned_by(pod, "other-job") == False
 
 
 def test_pod_is_owned_by_no_owner_references():
     """Test pod ownership when no owner references exist"""
-    pod = {
-        "metadata": {}
-    }
-    
+    pod = {"metadata": {}}
+
     assert kron.pod_is_owned_by(pod, "any-job") == False
 
 
 def test_pod_is_owned_by_empty_owner_references():
     """Test pod ownership with empty owner references"""
-    pod = {
-        "metadata": {
-            "ownerReferences": []
-        }
-    }
-    
+    pod = {"metadata": {"ownerReferences": []}}
+
     assert kron.pod_is_owned_by(pod, "any-job") == False
 
 
@@ -276,19 +261,13 @@ def test_has_label_missing_metadata():
 
 def test_has_label_missing_labels():
     """Test _has_label with missing labels"""
-    api_object = {
-        "metadata": {}
-    }
+    api_object = {"metadata": {}}
     assert kron._has_label(api_object, "app", "test") == False
 
 
 def test_has_label_empty_labels():
     """Test _has_label with empty labels"""
-    api_object = {
-        "metadata": {
-            "labels": {}
-        }
-    }
+    api_object = {"metadata": {"labels": {}}}
     assert kron._has_label(api_object, "app", "test") == False
 
 
@@ -298,7 +277,7 @@ def test_filter_dict_fields_custom_fields():
         {"metadata": {"name": "obj1", "namespace": "test", "uid": "123"}},
         {"metadata": {"name": "obj2", "namespace": "prod", "uid": "456"}},
     ]
-    
+
     result = kron._filter_dict_fields(objects_list, ["name", "namespace"])
     expected = [
         {"name": "obj1", "namespace": "test"},
@@ -313,7 +292,7 @@ def test_filter_dict_fields_missing_metadata():
         {"spec": {"schedule": "0 0 * * *"}},  # This will cause AttributeError
         {"metadata": {"name": "obj2"}},
     ]
-    
+
     # Should raise AttributeError when metadata is missing
     with pytest.raises(AttributeError):
         kron._filter_dict_fields(objects_list)
@@ -323,12 +302,10 @@ def test_clean_api_object_none_timezone():
     """Test _clean_api_object with None timezone"""
     from kubernetes import client
     from tests.objects import create_job
-    
+
     job_template = create_job()
     cronjob_spec = client.V1CronJobSpec(
-        schedule="0 9 * * *",
-        job_template=job_template,
-        time_zone=None
+        schedule="0 9 * * *", job_template=job_template, time_zone=None
     )
     cronjob = client.V1CronJob(
         api_version="batch/v1",
@@ -336,9 +313,9 @@ def test_clean_api_object_none_timezone():
         metadata=client.V1ObjectMeta(name="test-cron", namespace="test"),
         spec=cronjob_spec,
     )
-    
+
     cleaned = kron._clean_api_object(cronjob)
-    
+
     # Should handle None timezone gracefully
     timezone_value = cleaned["spec"].get("timeZone")
     assert timezone_value is None

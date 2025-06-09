@@ -558,12 +558,12 @@ def test_healthz_endpoint_with_client():
     with app.test_client() as client:
         response = client.get("/healthz")
         assert response.status_code == 200
-        
+
         data = response.get_json()
         assert data["status"] == "ok"
         assert "components" in data
         assert "database" in data["components"]
-        
+
         # In test mode, database should be disabled
         assert data["components"]["database"]["status"] == "disabled"
 

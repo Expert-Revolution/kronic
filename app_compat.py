@@ -7,10 +7,10 @@ from app.main import app
 
 # Export all the functions that tests expect
 __all__ = [
-    '_validate_cronjob_yaml',
-    '_strip_immutable_fields', 
-    'healthz',
-    'verify_password',
-    'namespace_filter',
-    'app'
+    "_validate_cronjob_yaml",
+    "_strip_immutable_fields",
+    "healthz",
+    "verify_password",
+    "namespace_filter",
+    "app",
 ]
