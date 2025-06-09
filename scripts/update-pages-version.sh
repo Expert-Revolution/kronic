@@ -86,8 +86,20 @@ update_index_html() {
         }' "$INDEX_HTML" > "$temp_file"
     fi
     
+    # Also update Chart Details section version references
+    local temp_file2="/tmp/index_updated2.html"
+    
+    # Update Chart Version in Chart Details section
+    sed "s/<li><strong>Chart Version:<\/strong> [^<]*<\/li>/<li><strong>Chart Version:<\/strong> $chart_version<\/li>/" "$temp_file" > "$temp_file2"
+    
+    # Update App Version in Chart Details section
+    sed "s/<li><strong>App Version:<\/strong> [^<]*<\/li>/<li><strong>App Version:<\/strong> $app_version<\/li>/" "$temp_file2" > "$temp_file"
+    
     # Replace the original file with the updated one
     mv "$temp_file" "$INDEX_HTML"
+    
+    # Clean up temporary file
+    rm -f "$temp_file2"
     
     echo "✅ Updated $INDEX_HTML with chart version $chart_version and app version $app_version"
 }
