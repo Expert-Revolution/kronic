@@ -194,6 +194,20 @@ def register_legacy_routes(app, auth):
         """Legacy health check endpoint."""
         return healthz()
     
+    @app.route("/login")
+    def login_page():
+        """Legacy login page route."""
+        return render_template("login.html")
+    
+    @app.route("/logout")
+    def logout_page():
+        """Legacy logout route."""
+        from flask import make_response
+        response = make_response(redirect(url_for('login_page')))
+        response.set_cookie('access_token', '', expires=0)
+        response.set_cookie('refresh_token', '', expires=0)
+        return response
+    
     @app.route("/")
     @app.route("/namespaces/")
     @auth_required
