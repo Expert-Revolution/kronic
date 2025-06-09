@@ -1,0 +1,17 @@
+auth:
+  enabled: true
+  adminPassword: "testing"
+
+env:
+  KRONIC_NAMESPACE_ONLY: "true"
+
+database:
+  persistence:
+    enabled: false
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
