@@ -2,6 +2,8 @@ name: Build / Test
 
 on:
   push:
+    brnches:
+      - main
     paths-ignore:
       - 'k8s/**'
       - '.github/workflows/chart-testing.yaml'
