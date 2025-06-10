@@ -1,7 +1,7 @@
 """Kronic application package."""
 
 # Import functions for backward compatibility
-from app_routes import _validate_cronjob_yaml, _strip_immutable_fields, healthz
+from app_routes import _validate_cronjob_yaml, _strip_immutable_fields, healthz, api_get_cronjob_yaml
 from app.core.security import verify_password, namespace_filter
 from app.main import create_app
 
@@ -58,4 +58,5 @@ __all__ = [
     "get_jobs",
     "get_pods",
     "index",
+    "api_get_cronjob_yaml",
 ]

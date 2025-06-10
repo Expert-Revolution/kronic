@@ -165,6 +165,21 @@ def healthz():
     return health_status, status_code
 
 
+def api_get_cronjob_yaml(namespace, cronjob_name):
+    """Get cronjob as YAML string for editor"""
+    # Import here to avoid circular imports
+    from kron import get_cronjob
+    
+    cronjob = get_cronjob(namespace, cronjob_name)
+    if not cronjob:
+        return {"error": "CronJob not found"}, 404
+
+    # Strip immutable fields for editing
+    cronjob = _strip_immutable_fields(cronjob)
+    cronjob_yaml = yaml.dump(cronjob)
+    return {"yaml": cronjob_yaml}
+
+
 def register_legacy_routes(app, auth):
     """Register all legacy routes for backward compatibility."""
 
@@ -268,6 +283,28 @@ def register_legacy_routes(app, auth):
         cronjobs = get_cronjobs(namespace)
         return jsonify({"cronjobs": cronjobs})
 
+    @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml")
+    @namespace_filter
+    @auth_required
+    def yaml_endpoint(namespace, cronjob_name):
+        """Get cronjob as YAML string for editor"""
+        return api_get_cronjob_yaml(namespace, cronjob_name)
+
+    @app.route("/login")
+    def login_page():
+        """Render the login page."""
+        from flask import render_template
+        return render_template("login.html")
+
+    @app.route("/logout")
+    def logout_page():
+        """Handle logout and redirect to login."""
+        from flask import redirect, url_for
+        response = redirect(url_for("login_page"))
+        response.set_cookie("access_token", "", expires=0)
+        response.set_cookie("refresh_token", "", expires=0)
+        return response
+
     # Add more legacy API routes as needed...
     # This is a minimal set to get tests working
 
@@ -275,4 +312,4 @@ def register_legacy_routes(app, auth):
 
 
 # Export functions that tests expect to import
-__all__ = ["_validate_cronjob_yaml", "_strip_immutable_fields", "healthz"]
+__all__ = ["_validate_cronjob_yaml", "_strip_immutable_fields", "healthz", "api_get_cronjob_yaml"]
