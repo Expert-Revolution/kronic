@@ -25,6 +25,7 @@ services:
       KUBECONFIG: "/home/kronic/.kube/config"
       # Database configuration
       KRONIC_DATABASE_HOST: postgres
+      DATABASE_ENABLED: true
       KRONIC_DATABASE_PORT: 5432
       KRONIC_DATABASE_NAME: kronic
       KRONIC_DATABASE_USER: kronic

@@ -52,7 +52,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowRegister }) => {
 
     try {
       const response = await AuthService.login(formData)
-      AuthService.storeTokens(response.token, response.refresh_token)
+      // Tokens are now handled via HTTP-only cookies
       AuthService.setRememberMe(formData.rememberMe)
       onSuccess()
     } catch (error: any) {

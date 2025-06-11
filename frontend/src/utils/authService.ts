@@ -10,6 +10,7 @@ export class AuthService {
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include', // Include cookies in request
       body: JSON.stringify({
         email: formData.email,
         password: formData.password
@@ -22,6 +23,8 @@ export class AuthService {
       throw new AuthError(data.error || 'Login failed')
     }
 
+    // Tokens are now handled via HTTP-only cookies
+    // No need to store them in localStorage
     return data
   }
 
@@ -31,6 +34,7 @@ export class AuthService {
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include', // Include cookies in request
       body: JSON.stringify({
         email: formData.email,
         password: formData.password
@@ -45,19 +49,11 @@ export class AuthService {
   }
 
   static async checkAuth(): Promise<{ authenticated: boolean; user?: any }> {
-    const token = this.getToken()
-    if (!token) {
-      return { authenticated: false }
-    }
-
     const response = await fetch(`${API_BASE}/check-auth`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      credentials: 'include' // Include cookies (JWT tokens) in request
     })
 
     if (!response.ok) {
-      this.clearTokens()
       return { authenticated: false }
     }
 
@@ -65,35 +61,54 @@ export class AuthService {
     return data
   }
 
-  static storeTokens(token: string, refreshToken: string): void {
-    localStorage.setItem('authToken', token)
-    localStorage.setItem('refreshToken', refreshToken)
+  static async logout(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        credentials: 'include' // Include cookies in request
+      })
+    } catch (error) {
+      // Even if logout fails on server, clear client state
+      console.warn('Logout request failed:', error)
+    }
+    
+    // Clear any client-side state
+    this.clearClientState()
   }
 
-  static getToken(): string | null {
-    return localStorage.getItem('authToken')
-  }
-
-  static getRefreshToken(): string | null {
-    return localStorage.getItem('refreshToken')
-  }
-
-  static clearTokens(): void {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('refreshToken')
+  static clearClientState(): void {
+    // Clear remember me state and redirect to login
+    localStorage.removeItem('rememberMe')
   }
 
   static setRememberMe(remember: boolean): void {
     if (remember) {
-      // For remember me, we could extend token expiry or use a different storage
       localStorage.setItem('rememberMe', 'true')
     } else {
       localStorage.removeItem('rememberMe')
-      // Could implement session storage instead of localStorage for temporary sessions
     }
   }
 
   static isRemembered(): boolean {
     return localStorage.getItem('rememberMe') === 'true'
+  }
+
+  // Deprecated methods - kept for compatibility but no longer needed with HTTP-only cookies
+  static storeTokens(token: string, refreshToken: string): void {
+    // No-op: tokens are now stored as HTTP-only cookies
+  }
+
+  static getToken(): string | null {
+    // No longer accessible from client-side due to HTTP-only cookies
+    return null
+  }
+
+  static getRefreshToken(): string | null {
+    // No longer accessible from client-side due to HTTP-only cookies
+    return null
+  }
+
+  static clearTokens(): void {
+    // No-op: tokens are cleared via logout endpoint
   }
 }
