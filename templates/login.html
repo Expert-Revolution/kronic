@@ -161,9 +161,8 @@ function loginForm() {
         const data = await response.json();
         
         if (response.ok) {
-          // Store JWT token
-          localStorage.setItem('authToken', data.token);
-          localStorage.setItem('refreshToken', data.refresh_token);
+          // Tokens are now set as HTTP-only cookies by the server
+          // No need to store in localStorage
           
           // Redirect to dashboard
           window.location.href = '/';
