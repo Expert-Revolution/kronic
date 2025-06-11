@@ -34,8 +34,8 @@ services:
       KRONIC_ADMIN_EMAIL: admin@example.com
     volumes:
       - .:/app
-      # Mount the entire .kube directory for proper kubernetes configuration
-      - $HOME/.kube:/home/kronic/.kube
+      # Mount mock kubeconfig for testing
+      - /tmp/mock-kube:/home/kronic/.kube
     ports:
       - 5001:5000
     depends_on:

@@ -145,7 +145,7 @@ def register():
     hashed_password = SecurePasswordManager.hash_password(password)
     
     # Create user
-    user = UserManager.create_user(email, hashed_password, is_active=True, is_verified=False)
+    user = UserManager.create_user(email, hashed_password, is_active=True, is_verified=False, password_already_hashed=True)
     if not user:
         return jsonify({'error': 'User with this email already exists or registration failed'}), 409
     
@@ -304,10 +304,21 @@ def login_page():
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
     """Check if user is authenticated."""
+    # First try Authorization header
     token = request.headers.get('Authorization')
     if token:
         try:
             token = token.split(' ')[1]  # Bearer <token>
+            payload = JWTManager.verify_token(token)
+            if payload:
+                return jsonify({'authenticated': True, 'user': payload}), 200
+        except:
+            pass
+    
+    # Then try cookies
+    token = request.cookies.get('access_token')
+    if token:
+        try:
             payload = JWTManager.verify_token(token)
             if payload:
                 return jsonify({'authenticated': True, 'user': payload}), 200

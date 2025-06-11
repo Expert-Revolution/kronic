@@ -94,7 +94,7 @@ export class AuthService {
   }
 
   // Deprecated methods - kept for compatibility but no longer needed with HTTP-only cookies
-  static storeTokens(token: string, refreshToken: string): void {
+  static storeTokens(_token: string, _refreshToken: string): void {
     // No-op: tokens are now stored as HTTP-only cookies
   }
 
