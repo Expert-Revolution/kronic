@@ -16,9 +16,9 @@ class Base(DeclarativeBase):
 
 class User(Base):
     """User model for authentication and authorization."""
-    
+
     __tablename__ = "users"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -35,9 +35,11 @@ class User(Base):
     last_login: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    
+
     # Relationships
-    user_roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    user_roles = relationship(
+        "UserRole", back_populates="user", cascade="all, delete-orphan"
+    )
     roles = relationship("Role", secondary="user_roles", back_populates="users")
 
     def __repr__(self) -> str:
@@ -46,15 +48,17 @@ class User(Base):
 
 class Role(Base):
     """Role model for authorization."""
-    
+
     __tablename__ = "roles"
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     permissions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    
+
     # Relationships
-    user_roles = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
+    user_roles = relationship(
+        "UserRole", back_populates="role", cascade="all, delete-orphan"
+    )
     users = relationship("User", secondary="user_roles", back_populates="roles")
 
     def __repr__(self) -> str:
@@ -63,21 +67,19 @@ class Role(Base):
 
 class UserRole(Base):
     """Association table for many-to-many relationship between users and roles."""
-    
+
     __tablename__ = "user_roles"
-    
+
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True
     )
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), primary_key=True)
-    
+
     # Relationships
     user = relationship("User", back_populates="user_roles")
     role = relationship("Role", back_populates="user_roles")
-    
-    __table_args__ = (
-        UniqueConstraint("user_id", "role_id", name="unique_user_role"),
-    )
+
+    __table_args__ = (UniqueConstraint("user_id", "role_id", name="unique_user_role"),)
 
     def __repr__(self) -> str:
         return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"

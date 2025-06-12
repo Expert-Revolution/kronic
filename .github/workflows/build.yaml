@@ -2,7 +2,10 @@ name: Build / Test
 
 on:
   push:
-    brnches:
+    branches:
+      - main
+  pull_request:
+    branches:
       - main
     paths-ignore:
       - 'k8s/**'
@@ -27,6 +30,13 @@ jobs:
 
       - name: Install Deps
         run: docker build --target dev -t ${IMAGE_NAME}:test .
+
+      - name: Run Code Quality Checks
+        run: |
+          docker run -i --rm -v $PWD:/app -e KRONIC_TEST=True ${IMAGE_NAME}:test bash -c "
+            black --check --diff . &&
+            flake8 . --statistics
+          "
 
       - name: Run Unit Tests
         run: docker run -i --rm -v $PWD:/app -e KRONIC_TEST=True ${IMAGE_NAME}:test pytest -m "not integration"

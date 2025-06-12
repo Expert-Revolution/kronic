@@ -29,30 +29,43 @@ except ImportError:
     # For tests or when kron module is not available
     def get_cronjobs(*args, **kwargs):
         return []
+
     def get_cronjob(*args, **kwargs):
         return None
+
     def get_jobs(*args, **kwargs):
         return []
+
     def get_pods(*args, **kwargs):
         return []
+
     def get_jobs_and_pods(*args, **kwargs):
         return [], []
+
     def pod_is_owned_by(*args, **kwargs):
         return False
+
     def toggle_cronjob_suspend(*args, **kwargs):
         return {"success": False}
+
     def trigger_cronjob(*args, **kwargs):
         return {"success": False}
+
     def update_cronjob(*args, **kwargs):
         return {"success": False}
+
     def delete_cronjob(*args, **kwargs):
         return {"success": False}
+
     def delete_job(*args, **kwargs):
         return {"success": False}
+
     def get_pod_logs(*args, **kwargs):
         return ""
+
     def _interpret_cron_schedule(*args, **kwargs):
         return "Unknown schedule"
+
 
 log = logging.getLogger("app.routes")
 
@@ -180,119 +193,152 @@ def _strip_immutable_fields(spec):
 def healthz():
     """Legacy health check endpoint."""
     from app.core.config import DATABASE_ENABLED
-    
+
     health_status = {"status": "ok", "components": {}}
-    
+
     # Check database health if enabled
     if DATABASE_ENABLED:
         try:
             from app.core.database import check_database_health
+
             db_health = check_database_health()
             health_status["components"]["database"] = db_health
-            
+
             # Set overall status to unhealthy if database is unhealthy
             if db_health.get("status") != "healthy":
                 health_status["status"] = "degraded"
         except Exception as e:
             health_status["components"]["database"] = {
                 "status": "unhealthy",
-                "error": f"Health check failed: {e}"
+                "error": f"Health check failed: {e}",
             }
             health_status["status"] = "degraded"
     else:
         health_status["components"]["database"] = {
             "status": "disabled",
-            "message": "Database not configured"
+            "message": "Database not configured",
         }
-    
+
     # Return appropriate HTTP status code
     status_code = 200 if health_status["status"] == "ok" else 503
     return health_status, status_code
 
 
+def api_get_cronjob_yaml(namespace, cronjob_name):
+    """Get cronjob as YAML string for editor"""
+    # Import here to avoid circular imports
+    from kron import get_cronjob
+
+    cronjob = get_cronjob(namespace, cronjob_name)
+    if not cronjob:
+        return {"error": "CronJob not found"}, 404
+
+    # Strip immutable fields for editing
+    cronjob = _strip_immutable_fields(cronjob)
+    cronjob_yaml = yaml.dump(cronjob)
+    return {"yaml": cronjob_yaml}
+
+
+# Define route functions at module level for test imports
+def index():
+    """Main index page."""
+    from app.core.config import NAMESPACE_ONLY, KRONIC_NAMESPACE
+
+    if NAMESPACE_ONLY:
+        return redirect(
+            f"/namespaces/{KRONIC_NAMESPACE}",
+            code=302,
+        )
+
+    cronjobs = get_cronjobs()
+    namespaces = {}
+    # Count cronjobs per namespace
+    for cronjob in cronjobs:
+        namespaces[cronjob["namespace"]] = namespaces.get(cronjob["namespace"], 0) + 1
+
+    return render_template("index.html", namespaces=namespaces)
+
+
+def view_namespace(namespace):
+    """View namespace with cronjobs."""
+    cronjobs = get_cronjobs(namespace)
+    cronjobs_with_details = []
+
+    for cronjob in cronjobs:
+        cronjob_detail = cronjob.copy()
+        # Add schedule interpretation
+        schedule = cronjob.get("spec", {}).get("schedule", "")
+        cronjob_detail["schedule_description"] = _interpret_cron_schedule(schedule)
+        cronjobs_with_details.append(cronjob_detail)
+
+    return render_template(
+        "namespace.html", cronjobs=cronjobs_with_details, namespace=namespace
+    )
+
+
+def view_cronjob_details(namespace, cronjob_name):
+    """View cronjob details in read-only mode"""
+    cronjob = get_cronjob(namespace, cronjob_name)
+    if cronjob:
+        cronjob = _strip_immutable_fields(cronjob)
+        schedule = cronjob.get("spec", {}).get("schedule", "")
+        schedule_description = _interpret_cron_schedule(schedule)
+        return render_template(
+            "cronjob_details.html",
+            cronjob=cronjob,
+            schedule_description=schedule_description,
+            namespace=namespace,
+            cronjob_name=cronjob_name,
+        )
+    else:
+        return redirect(f"/namespaces/{namespace}/cronjobs/{cronjob_name}", code=302)
+
+
 def register_legacy_routes(app, auth):
     """Register all legacy routes for backward compatibility."""
-    
+
     # Imports are now at module level for easier mocking
-    
     @app.route("/healthz")
     def healthz_route():
         """Legacy health check endpoint."""
         return healthz()
-    
+
     @app.route("/login")
     def login_page():
         """Legacy login page route."""
         return render_template("login.html")
-    
+
     @app.route("/logout")
     def logout_page():
         """Legacy logout route."""
         from flask import make_response
-        response = make_response(redirect(url_for('login_page')))
-        response.set_cookie('access_token', '', expires=0)
-        response.set_cookie('refresh_token', '', expires=0)
+
+        response = make_response(redirect(url_for("login_page")))
+        response.set_cookie("access_token", "", expires=0)
+        response.set_cookie("refresh_token", "", expires=0)
         return response
-    
+
     @app.route("/")
     @app.route("/namespaces/")
     @auth_required
-    def index():
-        """Main index page."""
-        from app.core.config import NAMESPACE_ONLY, KRONIC_NAMESPACE
-        if NAMESPACE_ONLY:
-            return redirect(
-                f"/namespaces/{KRONIC_NAMESPACE}",
-                code=302,
-            )
+    def index_route():
+        """Main index page route wrapper."""
+        return index()
 
-        cronjobs = get_cronjobs()
-        namespaces = {}
-        # Count cronjobs per namespace
-        for cronjob in cronjobs:
-            namespaces[cronjob["namespace"]] = namespaces.get(cronjob["namespace"], 0) + 1
-
-        return render_template("index.html", namespaces=namespaces)
-    
     @app.route("/namespaces/<namespace>")
     @namespace_filter
     @auth_required
-    def view_namespace(namespace):
-        """View namespace with cronjobs."""
-        cronjobs = get_cronjobs(namespace)
-        cronjobs_with_details = []
+    def view_namespace_route(namespace):
+        """View namespace route wrapper."""
+        return view_namespace(namespace)
 
-        for cronjob in cronjobs:
-            cronjob_detail = cronjob.copy()
-            # Add schedule interpretation
-            schedule = cronjob.get("spec", {}).get("schedule", "")
-            cronjob_detail["schedule_description"] = _interpret_cron_schedule(schedule)
-            cronjobs_with_details.append(cronjob_detail)
-
-        return render_template(
-            "namespace.html", cronjobs=cronjobs_with_details, namespace=namespace
-        )
-    
     @app.route("/namespaces/<namespace>/cronjobs/<cronjob_name>/details")
     @namespace_filter
     @auth_required
-    def view_cronjob_details(namespace, cronjob_name):
-        """View cronjob details in read-only mode"""
-        cronjob = get_cronjob(namespace, cronjob_name)
-        if cronjob:
-            cronjob = _strip_immutable_fields(cronjob)
-            schedule = cronjob.get("spec", {}).get("schedule", "")
-            schedule_description = _interpret_cron_schedule(schedule)
-            return render_template(
-                "cronjob_details.html",
-                cronjob=cronjob,
-                schedule_description=schedule_description,
-                namespace=namespace,
-                cronjob_name=cronjob_name,
-            )
-        else:
-            return redirect(f"/namespaces/{namespace}/cronjobs/{cronjob_name}", code=302)
-    
+    def view_cronjob_details_route(namespace, cronjob_name):
+        """View cronjob details route wrapper."""
+        return view_cronjob_details(namespace, cronjob_name)
+
     # Register all the API endpoints that were in the original app.py
     @app.route("/api/namespaces/<namespace>/cronjobs")
     @namespace_filter
@@ -301,7 +347,7 @@ def register_legacy_routes(app, auth):
         """Get cronjobs for namespace."""
         cronjobs = get_cronjobs(namespace)
         return jsonify({"cronjobs": cronjobs})
-    
+
     @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>")
     @namespace_filter
     @auth_required
@@ -309,26 +355,28 @@ def register_legacy_routes(app, auth):
         """Get a specific cronjob."""
         cronjob = get_cronjob(namespace, cronjob_name)
         return cronjob
-    
+
     @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml")
     @namespace_filter
     @auth_required
-    def api_get_cronjob_yaml(namespace, cronjob_name):
+    def api_get_cronjob_yaml_route(namespace, cronjob_name):
         """Get cronjob as YAML string for editor."""
-        cronjob = get_cronjob(namespace, cronjob_name)
-        if not cronjob:
-            return {"error": "CronJob not found"}, 404
-        
-        # Strip immutable fields for editing
-        cronjob = _strip_immutable_fields(cronjob)
-        cronjob_yaml = yaml.dump(cronjob)
-        return {"yaml": cronjob_yaml}
-    
+        return api_get_cronjob_yaml(namespace, cronjob_name)
+
     # Add more legacy API routes as needed...
     # This is a minimal set to get tests working
-    
+
     log.info("Legacy routes registered successfully")
 
 
 # Export functions that tests expect to import
-__all__ = ['_validate_cronjob_yaml', '_strip_immutable_fields', 'healthz', 'register_legacy_routes']
+__all__ = [
+    "_validate_cronjob_yaml",
+    "_strip_immutable_fields",
+    "healthz",
+    "api_get_cronjob_yaml",
+    "register_legacy_routes",
+    "index",
+    "view_namespace",
+    "view_cronjob_details",
+]

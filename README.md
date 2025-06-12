@@ -4,8 +4,12 @@
 
 # Kronic
 
-![Build / Test](https://github.com/mshade/kronic/actions/workflows/build.yaml/badge.svg)
+![Build / Test](https://github.com/davides93/kronic/actions/workflows/build.yaml/badge.svg)
+![Chart Testing](https://github.com/davides93/kronic/actions/workflows/chart-testing.yaml/badge.svg)
+![Security Scanning](https://github.com/davides93/kronic/actions/workflows/security.yml/badge.svg)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Helm Chart](https://img.shields.io/badge/Helm-Chart-blue.svg)](https://davides93.github.io/kronic)
+[![Docker](https://img.shields.io/badge/Docker-Available-blue.svg)](https://github.com/davides93/kronic/pkgs/container/kronic)
 
 The simple Kubernetes CronJob admin UI.
 

@@ -46,11 +46,14 @@ if ADMIN_PASSWORD:
 if not TEST:
     try:
         from database import init_database, is_database_available
+
         DATABASE_ENABLED = init_database()
         if DATABASE_ENABLED:
             log.info("Database initialized successfully")
         else:
-            log.info("Database not configured, using environment variable authentication")
+            log.info(
+                "Database not configured, using environment variable authentication"
+            )
     except ImportError:
         log.warning("Database modules not available")
     except Exception as e:

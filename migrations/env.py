@@ -51,11 +51,11 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    
+
     # If no URL is configured, use a dummy PostgreSQL URL for offline migrations
     if not url or url == "driver://user:pass@localhost/dbname":
         url = "postgresql://kronic:kronic@localhost/kronic"
-    
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -81,7 +81,7 @@ def run_migrations_online() -> None:
         # Fall back to offline mode if no database is configured
         run_migrations_offline()
         return
-    
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -90,9 +90,7 @@ def run_migrations_online() -> None:
 
     try:
         with connectable.connect() as connection:
-            context.configure(
-                connection=connection, target_metadata=target_metadata
-            )
+            context.configure(connection=connection, target_metadata=target_metadata)
 
             with context.begin_transaction():
                 context.run_migrations()

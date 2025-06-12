@@ -40,7 +40,9 @@ DATABASE_ENABLED = False
 
 # CORS configuration
 CORS_ORIGINS = os.environ.get("KRONIC_CORS_ORIGINS", "*").split(",")
-CORS_ALLOW_CREDENTIALS = os.environ.get("KRONIC_CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+CORS_ALLOW_CREDENTIALS = (
+    os.environ.get("KRONIC_CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+)
 
 # API configuration
 API_VERSION = "v1"
@@ -55,6 +57,7 @@ if ADMIN_PASSWORD:
 if not TEST:
     try:
         from app.core.database import init_database, is_database_available
+
         DATABASE_ENABLED = init_database()
         if DATABASE_ENABLED:
             log.info("Database initialized successfully")
@@ -62,6 +65,7 @@ if not TEST:
         # Fallback to old import path for compatibility
         try:
             from database import init_database, is_database_available
+
             DATABASE_ENABLED = init_database()
             if DATABASE_ENABLED:
                 log.info("Database initialized successfully")
@@ -73,7 +77,9 @@ if not TEST:
     try:
         # Try to get the current namespace
         if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/namespace"):
-            with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
+            with open(
+                "/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r"
+            ) as f:
                 KRONIC_NAMESPACE = f.read().strip()
         else:
             KRONIC_NAMESPACE = os.environ.get("KRONIC_NAMESPACE", "default")
@@ -82,4 +88,6 @@ if not TEST:
 else:
     KRONIC_NAMESPACE = "default"
 
-log.info(f"Configuration loaded - Database: {DATABASE_ENABLED}, Namespace: {KRONIC_NAMESPACE}")
+log.info(
+    f"Configuration loaded - Database: {DATABASE_ENABLED}, Namespace: {KRONIC_NAMESPACE}"
+)

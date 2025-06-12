@@ -543,7 +543,7 @@ def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
 @patch("app_routes.get_cronjob")
 def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
     """Test the new details route with a non-existent cronjob"""
-    # Mock no cronjob found
+    # Mock that no cronjob is found
     mock_get_cronjob.return_value = None
 
     with app.test_client() as client:
@@ -558,12 +558,12 @@ def test_healthz_endpoint_with_client():
     with app.test_client() as client:
         response = client.get("/healthz")
         assert response.status_code == 200
-        
+
         data = response.get_json()
         assert data["status"] == "ok"
         assert "components" in data
         assert "database" in data["components"]
-        
+
         # In test mode, database should be disabled
         assert data["components"]["database"]["status"] == "disabled"
 
