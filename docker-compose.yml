@@ -15,13 +15,23 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   kronic:
     build:
       context: .
       target: dev
     environment:
       KRONIC_ALLOW_NAMESPACES: ""
-      KRONIC_ADMIN_PASSWORD: "test2"
+      KRONIC_ADMIN_PASSWORD: "admin123!"
       KUBECONFIG: "/home/kronic/.kube/config"
       # Database configuration
       KRONIC_DATABASE_HOST: postgres
@@ -31,7 +41,16 @@ services:
       KRONIC_DATABASE_USER: kronic
       KRONIC_DATABASE_PASSWORD: kronic123
       # Admin user for seeding
-      KRONIC_ADMIN_EMAIL: admin@example.com
+      KRONIC_ADMIN_EMAIL: admin@kronic.dev
+      # JWT Configuration
+      JWT_SECRET_KEY: dev-secret-key-change-in-production-12345
+      JWT_ALGORITHM: HS256
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_ENABLED: true
+      # Flask Configuration
+      FLASK_DEBUG: true
+      FLASK_ENV: development
     volumes:
       - .:/app
       # Mount mock kubeconfig for testing
@@ -40,6 +59,8 @@ services:
       - 5001:5000
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # networks:
     #   - k3d-kronic-localdev
