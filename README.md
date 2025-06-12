@@ -238,6 +238,8 @@ kubectl -n kronic port-forward deployment/kronic 8000:8000
 
 ## Running Locally
 
+For comprehensive Docker usage instructions, see [Docker Documentation](docs/DOCKER.md).
+
 ### Automated Local Development (Recommended)
 
 For a complete local development environment with automated k3d cluster provisioning:
