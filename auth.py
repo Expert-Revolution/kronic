@@ -124,6 +124,17 @@ class UserManager:
                     # Update last login
                     user.last_login = datetime.now().astimezone()
                     session.commit()
+                    
+                    # Access all attributes while session is still active to avoid DetachedInstanceError
+                    user_id = user.id
+                    user_email = user.email
+                    user_is_active = user.is_active
+                    user_is_verified = user.is_verified
+                    user_last_login = user.last_login
+                    
+                    # Expunge the user from session before closing
+                    session.expunge(user)
+                    
                     log.info(f"User authenticated successfully: {email}")
                     return user
             

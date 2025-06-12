@@ -47,13 +47,16 @@ def auth_required(f):
         if request.path.startswith('/api/') or request.headers.get('Content-Type') == 'application/json':
             return jsonify({'error': 'Authentication required'}), 401
         
+        # Import config for checking authentication settings
+        import config
+        
         # For web requests, redirect to login page instead of basic auth
-        if not USERS and not DATABASE_ENABLED:
+        if not config.USERS and not config.DATABASE_ENABLED:
             # No authentication configured, allow access
             return f(*args, **kwargs)
         
         # Redirect to login page for web requests
-        return redirect(url_for('auth.login_page'))
+        return redirect(url_for('login_page'))
     
     return decorated_function
 
