@@ -528,7 +528,7 @@ def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
             },
         },
     }
-    
+
     mock_get_cronjob.return_value = mock_cronjob
 
     with app.test_client() as client:

@@ -45,24 +45,28 @@ def auth_required(f):
                 return f(*args, **kwargs)
 
         # Check if this is an API request
-        if request.path.startswith('/api/') or request.headers.get('Content-Type') == 'application/json':
-            return jsonify({'error': 'Authentication required'}), 401
-        
+        if (
+            request.path.startswith("/api/")
+            or request.headers.get("Content-Type") == "application/json"
+        ):
+            return jsonify({"error": "Authentication required"}), 401
+
         # Import config for checking authentication settings
         import config
+
         # For web requests, redirect to login page instead of basic auth
         if not config.USERS and not config.DATABASE_ENABLED:
             # No authentication configured, allow access
             return f(*args, **kwargs)
 
         # Redirect to login page for web requests
-        return redirect(url_for('login_page'))
+        return redirect(url_for("login_page"))
+
     return decorated_function
 
 
 def verify_password(username, password):
     """Verify username and password for HTTP Basic Auth."""
-    from app.core.config import DATABASE_ENABLED
     import config  # Import for dynamic USERS access
 
     # Try database authentication first if available

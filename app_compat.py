@@ -1,7 +1,12 @@
 """Compatibility module for legacy app.py imports."""
 
 # Import functions from the new structure for backward compatibility
-from app_routes import _validate_cronjob_yaml, _strip_immutable_fields, healthz, api_get_cronjob_yaml
+from app_routes import (
+    _validate_cronjob_yaml,
+    _strip_immutable_fields,
+    healthz,
+    api_get_cronjob_yaml,
+)
 from app.core.security import verify_password, namespace_filter
 from app.main import app
 

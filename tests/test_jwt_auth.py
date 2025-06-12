@@ -140,11 +140,11 @@ class TestJWTAuthentication:
         response = self.client.get("/login")
         assert response.status_code == 200
         # Check for React mount point instead of static text
-        assert b'login-root' in response.data
+        assert b"login-root" in response.data
         # Check for React script inclusion
-        assert b'/dist/login.js' in response.data
-    
-    @patch('auth_api.UserManager.authenticate_user')
+        assert b"/dist/login.js" in response.data
+
+    @patch("auth_api.UserManager.authenticate_user")
     def test_login_api_success(self, mock_auth):
         """Test successful login API call."""
         # Mock successful authentication
@@ -219,12 +219,12 @@ class TestJWTAuthentication:
     def test_unauthenticated_redirect_to_login(self):
         """Test that unauthenticated web requests redirect to login."""
         # Mock authentication configured but user not authenticated (to test redirect behavior)
-        with patch("config.USERS", {"admin": "hashed_password"}), \
-             patch("config.DATABASE_ENABLED", False), \
-             patch("kron.batch.list_cron_job_for_all_namespaces") as mock_list_cronjobs:
+        with patch("config.USERS", {"admin": "hashed_password"}), patch(
+            "config.DATABASE_ENABLED", False
+        ), patch("kron.batch.list_cron_job_for_all_namespaces") as mock_list_cronjobs:
             # Mock an empty list of cronjobs
             mock_list_cronjobs.return_value.items = []
-            
+
             response = self.client.get("/")
             assert response.status_code == 302
             # The redirect should go to the auth login page
