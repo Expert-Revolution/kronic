@@ -187,9 +187,9 @@ class TestDatabaseIntegration:
             config.USERS = {"admin": "hashed_password"}
 
             # Mock check_password_hash to return True
-            with patch("app.core.security.check_password_hash", return_value=True):
-                result = verify_password("admin", "password")
-                assert result == "admin"
+            with patch('app.core.security.check_password_hash', return_value=True):
+                result = verify_password('admin', 'password')
+                assert result == 'admin'
         finally:
             # Restore original values
             config.USERS = original_users

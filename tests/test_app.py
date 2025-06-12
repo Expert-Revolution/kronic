@@ -506,7 +506,8 @@ def test_index_route_logic_namespace_only_false(mock_get_cronjobs):
         config.NAMESPACE_ONLY = original_namespace_only
 
 
-def test_view_cronjob_details_existing_cronjob():
+@patch("app_routes.get_cronjob")
+def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
     """Test the new details route with an existing cronjob"""
     # Mock an existing cronjob
     mock_cronjob = {
@@ -547,7 +548,8 @@ def test_view_cronjob_details_existing_cronjob():
                 assert b"default" in response.data
 
 
-def test_view_cronjob_details_nonexistent_cronjob():
+@patch("app_routes.get_cronjob")
+def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
     """Test the new details route with a non-existent cronjob"""
     # Mock the Kubernetes client call to raise a 404 exception
     from kubernetes.client.rest import ApiException

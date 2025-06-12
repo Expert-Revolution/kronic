@@ -20,6 +20,7 @@ from jwt_auth import (
     SessionManager,
     jwt_required,
     get_limiter,
+    JWT_REFRESH_TOKEN_EXPIRES
 )
 
 log = logging.getLogger("app.auth_api")
@@ -88,6 +89,45 @@ def login():
         "login_time": user.last_login.isoformat() if user.last_login else None,
     }
     SessionManager.store_session(str(user.id), session_data, ttl=3600)
+    
+    log.info(f"Successful login for user: {email}")
+    
+    # Create response with JSON data
+    response_data = {
+        'message': 'Login successful',
+        'token': tokens['access_token'],
+        'refresh_token': tokens['refresh_token'],
+        'expires_in': tokens['expires_in'],
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'is_verified': user.is_verified
+        }
+    }
+    
+    response = make_response(jsonify(response_data), 200)
+    
+    # Set tokens as HTTP-only cookies for web authentication
+    response.set_cookie(
+        'access_token', 
+        tokens['access_token'],
+        max_age=int(tokens['expires_in']),
+        httponly=True,
+        secure=request.is_secure,  # Use secure flag if HTTPS
+        samesite='Lax'
+    )
+    
+    response.set_cookie(
+        'refresh_token',
+        tokens['refresh_token'],
+        max_age=int(JWT_REFRESH_TOKEN_EXPIRES.total_seconds()),
+        httponly=True,
+        secure=request.is_secure,  # Use secure flag if HTTPS
+        samesite='Lax'
+    )
+    
+    return response
+>>>>>>> 22f6ca375acb4c17417804e9d535120fa848461c
 
     log.info(f"Successful login for user: {email}")
 
@@ -144,6 +184,22 @@ def register():
 
     # Hash password with bcrypt
     hashed_password = SecurePasswordManager.hash_password(password)
+    
+    # Create user
+    user = UserManager.create_user(email, hashed_password, is_active=True, is_verified=False, password_already_hashed=True)
+    if not user:
+        return jsonify({'error': 'User with this email already exists or registration failed'}), 409
+    
+    log.info(f"New user registered: {email}")
+    
+    return jsonify({
+        'message': 'User registered successfully',
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'is_verified': user.is_verified
+        }
+    }), 201
 
     # Create user
     user = UserManager.create_user(
@@ -178,17 +234,54 @@ def register():
 def refresh_token():
     """Refresh access token using refresh token."""
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid request format"}), 400
-
-    refresh_token = data.get("refresh_token")
+    
+    # Try to get refresh token from request body first, then from cookies
+    refresh_token = None
+    if data:
+        refresh_token = data.get('refresh_token')
+    
+    if not refresh_token:
+        refresh_token = request.cookies.get('refresh_token')
+    
     if not refresh_token:
         return jsonify({"error": "Refresh token is required"}), 400
 
     # Generate new tokens
     new_tokens = JWTManager.refresh_access_token(refresh_token)
     if not new_tokens:
-        return jsonify({"error": "Invalid or expired refresh token"}), 401
+        return jsonify({'error': 'Invalid or expired refresh token'}), 401
+
+    # Create response with new tokens
+    response_data = {
+        'message': 'Token refreshed successfully',
+        'token': new_tokens['access_token'],
+        'refresh_token': new_tokens['refresh_token'],
+        'expires_in': new_tokens['expires_in']
+    }
+    
+    response = make_response(jsonify(response_data), 200)
+    
+    # Update cookies with new tokens
+    response.set_cookie(
+        'access_token', 
+        new_tokens['access_token'],
+        max_age=int(new_tokens['expires_in']),
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax'
+    )
+    
+    response.set_cookie(
+        'refresh_token',
+        new_tokens['refresh_token'],
+        max_age=int(JWT_REFRESH_TOKEN_EXPIRES.total_seconds()),
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax'
+    )
+    
+    return response
+>>>>>>> 22f6ca375acb4c17417804e9d535120fa848461c
 
     return (
         jsonify(
@@ -311,7 +404,8 @@ def login_page():
 @auth_bp.route("/check-auth", methods=["GET"])
 def check_auth():
     """Check if user is authenticated."""
-    token = request.headers.get("Authorization")
+    # First try Authorization header
+    token = request.headers.get('Authorization')
     if token:
         try:
             token = token.split(" ")[1]  # Bearer <token>
@@ -320,5 +414,15 @@ def check_auth():
                 return jsonify({"authenticated": True, "user": payload}), 200
         except:
             pass
-
-    return jsonify({"authenticated": False}), 401
+    
+    # Then try cookies
+    token = request.cookies.get('access_token')
+    if token:
+        try:
+            payload = JWTManager.verify_token(token)
+            if payload:
+                return jsonify({'authenticated': True, 'user': payload}), 200
+        except:
+            pass
+    
+    return jsonify({'authenticated': False}), 401

@@ -44,7 +44,33 @@ log = logging.getLogger("app.flask")
 
 @auth.verify_password
 def verify_password(username, password):
-    # Try database authentication first if available
+    # Check for JWT token first (from cookies or headers)
+    from jwt_auth import JWTManager
+    
+    token = None
+    # Get token from Authorization header
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            pass
+    
+    # Get token from cookies as fallback
+    if not token:
+        token = request.cookies.get('access_token')
+    
+    # If we have a JWT token, verify it
+    if token:
+        try:
+            payload = JWTManager.verify_token(token)
+            if payload:
+                log.info(f"User authenticated successfully via JWT token: {payload.get('email', 'unknown')}")
+                return payload.get('email', 'jwt_user')
+        except Exception as e:
+            log.debug(f"JWT token verification failed: {e}")
+    
+    # Try database authentication if available
     if config.DATABASE_ENABLED:
         try:
             from auth import UserManager
