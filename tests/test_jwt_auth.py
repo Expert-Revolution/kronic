@@ -219,8 +219,8 @@ class TestJWTAuthentication:
     def test_unauthenticated_redirect_to_login(self):
         """Test that unauthenticated web requests redirect to login."""
         # Mock authentication configured but user not authenticated (to test redirect behavior)
-        with patch("app.core.security.USERS", {"admin": "hashed_password"}), \
-             patch("app.core.security.DATABASE_ENABLED", False), \
+        with patch("config.USERS", {"admin": "hashed_password"}), \
+             patch("config.DATABASE_ENABLED", False), \
              patch("kron.batch.list_cron_job_for_all_namespaces") as mock_list_cronjobs:
             # Mock an empty list of cronjobs
             mock_list_cronjobs.return_value.items = []
@@ -228,7 +228,7 @@ class TestJWTAuthentication:
             response = self.client.get("/")
             assert response.status_code == 302
             # The redirect should go to the auth login page
-            assert "/api/auth/login-page" in response.location
+            assert "/login" in response.location
 
     def test_api_requests_return_401_when_unauthenticated(self):
         """Test that API requests return 401 when unauthenticated."""

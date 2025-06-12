@@ -528,41 +528,29 @@ def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
             },
         },
     }
+    
+    mock_get_cronjob.return_value = mock_cronjob
 
-    # Mock the Kubernetes client call directly
-    with patch("kron.batch.read_namespaced_cron_job") as mock_read_cronjob:
-        # Set up the mock to return a mock Kubernetes object
-        mock_k8s_object = MagicMock()
-        mock_read_cronjob.return_value = mock_k8s_object
-        
-        # Mock the generic.sanitize_for_serialization to return our test data
-        with patch("kron.generic.sanitize_for_serialization") as mock_sanitize:
-            mock_sanitize.return_value = mock_cronjob
-
-            with app.test_client() as client:
-                # Test that the route exists and returns a 200 response
-                response = client.get("/namespaces/default/cronjobs/test-cronjob/details")
-                assert response.status_code == 200
-                # Check that it contains expected content
-                assert b"test-cronjob" in response.data
-                assert b"default" in response.data
+    with app.test_client() as client:
+        # Test that the route exists and returns a 200 response
+        response = client.get("/namespaces/default/cronjobs/test-cronjob/details")
+        assert response.status_code == 200
+        # Check that it contains expected content
+        assert b"test-cronjob" in response.data
+        assert b"default" in response.data
 
 
 @patch("app_routes.get_cronjob")
 def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
     """Test the new details route with a non-existent cronjob"""
-    # Mock the Kubernetes client call to raise a 404 exception
-    from kubernetes.client.rest import ApiException
-    
-    with patch("kron.batch.read_namespaced_cron_job") as mock_read_cronjob:
-        # Make the mock raise a 404 ApiException
-        mock_read_cronjob.side_effect = ApiException(status=404, reason="Not Found")
+    # Mock that no cronjob is found
+    mock_get_cronjob.return_value = None
 
-        with app.test_client() as client:
-            # Test that it redirects to the edit/create page
-            response = client.get("/namespaces/default/cronjobs/nonexistent/details")
-            assert response.status_code == 302
-            assert "/namespaces/default/cronjobs/nonexistent" in response.location
+    with app.test_client() as client:
+        # Test that it redirects to the edit/create page
+        response = client.get("/namespaces/default/cronjobs/nonexistent/details")
+        assert response.status_code == 302
+        assert "/namespaces/default/cronjobs/nonexistent" in response.location
 
 
 def test_healthz_endpoint_with_client():
