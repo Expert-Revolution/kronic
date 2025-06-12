@@ -1,6 +1,7 @@
 """Main application entry point for Kronic."""
 
 import logging
+import os
 import uuid
 from functools import wraps
 
@@ -56,17 +57,45 @@ def create_app():
         except ImportError:
             log.warning("Rate limiter initialization failed")
 
-    # Middleware for request ID tracking
+    # Configure app settings
+    from app.core.config import MAX_CONTENT_LENGTH, CSRF_SECRET_KEY
+
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+    app.secret_key = os.environ.get("SECRET_KEY", CSRF_SECRET_KEY)
+
+    # Middleware for request ID tracking and security
     @app.before_request
     def before_request():
         # Generate unique request ID
         g.request_id = str(uuid.uuid4())
 
+        # Validate content length
+        from app.core.security import validate_content_length, validate_csrf_token
+
+        validate_content_length()
+
+        # Validate CSRF token for state-changing requests
+        validate_csrf_token()
+
     @app.after_request
     def after_request(response):
         # Add request ID to response headers
         response.headers["X-Request-ID"] = getattr(g, "request_id", "unknown")
+
+        # Apply security headers
+        from app.core.security import apply_security_headers
+
+        response = apply_security_headers(response)
+
         return response
+
+    # Template global functions for CSRF token
+    @app.template_global()
+    def csrf_token():
+        """Generate CSRF token for templates."""
+        from app.core.security import generate_csrf_token
+
+        return generate_csrf_token()
 
     # Global error handlers
     @app.errorhandler(400)

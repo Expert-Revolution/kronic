@@ -157,3 +157,70 @@ def namespace_filter(f):
         return f(namespace, *args, **kwargs)
 
     return decorated_function
+
+
+def apply_security_headers(response):
+    """Apply security headers to Flask response."""
+    from app.core.config import SECURITY_HEADERS_ENABLED, SECURITY_HEADERS
+
+    if not SECURITY_HEADERS_ENABLED:
+        return response
+
+    for header, value in SECURITY_HEADERS.items():
+        if value:  # Only set header if value is not empty
+            response.headers[header] = value
+
+    return response
+
+
+def validate_content_length():
+    """Validate request content length against configured limits."""
+    from flask import request, abort
+    from app.core.config import MAX_CONTENT_LENGTH
+
+    if request.content_length and request.content_length > MAX_CONTENT_LENGTH:
+        log.warning(
+            f"Request content length {request.content_length} exceeds limit {MAX_CONTENT_LENGTH}"
+        )
+        abort(413)  # Request Entity Too Large
+
+
+def generate_csrf_token():
+    """Generate a CSRF token for the current session."""
+    import secrets
+    from flask import session
+    from app.core.config import CSRF_ENABLED
+
+    if not CSRF_ENABLED:
+        return None
+
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_urlsafe(32)
+
+    return session["csrf_token"]
+
+
+def validate_csrf_token():
+    """Validate CSRF token for state-changing requests."""
+    from flask import request, session, abort
+    from app.core.config import CSRF_ENABLED
+
+    if not CSRF_ENABLED:
+        return True
+
+    # Only validate CSRF for state-changing methods
+    if request.method not in ["POST", "PUT", "DELETE", "PATCH"]:
+        return True
+
+    # Skip CSRF validation for API endpoints with Authorization header
+    if request.path.startswith("/api/") and request.headers.get("Authorization"):
+        return True
+
+    token = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
+    session_token = session.get("csrf_token")
+
+    if not token or not session_token or token != session_token:
+        log.warning(f"CSRF token validation failed for {request.method} {request.path}")
+        abort(403)
+
+    return True

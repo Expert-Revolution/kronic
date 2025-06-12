@@ -48,6 +48,44 @@ CORS_ALLOW_CREDENTIALS = (
 API_VERSION = "v1"
 API_PREFIX = f"/api/{API_VERSION}"
 
+# Security configuration
+SECURITY_HEADERS_ENABLED = (
+    os.environ.get("KRONIC_SECURITY_HEADERS_ENABLED", "true").lower() == "true"
+)
+
+# Security Headers
+SECURITY_HEADERS = {
+    "Strict-Transport-Security": os.environ.get(
+        "KRONIC_HSTS_HEADER", "max-age=31536000; includeSubDomains"
+    ),
+    "X-Frame-Options": os.environ.get("KRONIC_X_FRAME_OPTIONS", "DENY"),
+    "X-Content-Type-Options": os.environ.get(
+        "KRONIC_X_CONTENT_TYPE_OPTIONS", "nosniff"
+    ),
+    "X-XSS-Protection": os.environ.get("KRONIC_X_XSS_PROTECTION", "1; mode=block"),
+    "Referrer-Policy": os.environ.get(
+        "KRONIC_REFERRER_POLICY", "strict-origin-when-cross-origin"
+    ),
+    "Content-Security-Policy": os.environ.get(
+        "KRONIC_CSP",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'",
+    ),
+    "Permissions-Policy": os.environ.get(
+        "KRONIC_PERMISSIONS_POLICY", "geolocation=(), microphone=(), camera=()"
+    ),
+}
+
+# CSRF Protection
+CSRF_ENABLED = os.environ.get("KRONIC_CSRF_ENABLED", "true").lower() == "true"
+CSRF_SECRET_KEY = os.environ.get(
+    "KRONIC_CSRF_SECRET_KEY", "change-this-csrf-secret-key"
+)
+
+# Request size limits
+MAX_CONTENT_LENGTH = int(
+    os.environ.get("KRONIC_MAX_CONTENT_LENGTH", 16 * 1024 * 1024)
+)  # 16MB default
+
 ## Config Logic
 USERS = {}
 if ADMIN_PASSWORD:
