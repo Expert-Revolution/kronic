@@ -8,6 +8,52 @@ from yaml.parser import ParserError
 from flask import request, render_template, redirect, url_for, jsonify
 from app.core.security import auth_required, namespace_filter
 
+# Import kron functions at module level for easier mocking
+try:
+    from kron import (
+        get_cronjobs,
+        get_jobs,
+        get_jobs_and_pods,
+        get_cronjob,
+        get_pods,
+        get_pod_logs,
+        pod_is_owned_by,
+        toggle_cronjob_suspend,
+        trigger_cronjob,
+        update_cronjob,
+        delete_cronjob,
+        delete_job,
+        _interpret_cron_schedule,
+    )
+except ImportError:
+    # For tests or when kron module is not available
+    def get_cronjobs(*args, **kwargs):
+        return []
+    def get_cronjob(*args, **kwargs):
+        return None
+    def get_jobs(*args, **kwargs):
+        return []
+    def get_pods(*args, **kwargs):
+        return []
+    def get_jobs_and_pods(*args, **kwargs):
+        return [], []
+    def pod_is_owned_by(*args, **kwargs):
+        return False
+    def toggle_cronjob_suspend(*args, **kwargs):
+        return {"success": False}
+    def trigger_cronjob(*args, **kwargs):
+        return {"success": False}
+    def update_cronjob(*args, **kwargs):
+        return {"success": False}
+    def delete_cronjob(*args, **kwargs):
+        return {"success": False}
+    def delete_job(*args, **kwargs):
+        return {"success": False}
+    def get_pod_logs(*args, **kwargs):
+        return ""
+    def _interpret_cron_schedule(*args, **kwargs):
+        return "Unknown schedule"
+
 log = logging.getLogger("app.routes")
 
 
@@ -167,32 +213,26 @@ def healthz():
 def register_legacy_routes(app, auth):
     """Register all legacy routes for backward compatibility."""
     
-    # Import necessary modules
-    try:
-        from kron import (
-            get_cronjobs,
-            get_jobs,
-            get_jobs_and_pods,
-            get_cronjob,
-            get_pods,
-            get_pod_logs,
-            pod_is_owned_by,
-            toggle_cronjob_suspend,
-            trigger_cronjob,
-            update_cronjob,
-            delete_cronjob,
-            delete_job,
-            _interpret_cron_schedule,
-        )
-    except ImportError:
-        # For tests or when kron module is not available
-        log.warning("kron module not available, some routes may not work")
-        return
+    # Imports are now at module level for easier mocking
     
     @app.route("/healthz")
     def healthz_route():
         """Legacy health check endpoint."""
         return healthz()
+    
+    @app.route("/login")
+    def login_page():
+        """Legacy login page route."""
+        return render_template("login.html")
+    
+    @app.route("/logout")
+    def logout_page():
+        """Legacy logout route."""
+        from flask import make_response
+        response = make_response(redirect(url_for('login_page')))
+        response.set_cookie('access_token', '', expires=0)
+        response.set_cookie('refresh_token', '', expires=0)
+        return response
     
     @app.route("/")
     @app.route("/namespaces/")
@@ -262,6 +302,28 @@ def register_legacy_routes(app, auth):
         cronjobs = get_cronjobs(namespace)
         return jsonify({"cronjobs": cronjobs})
     
+    @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>")
+    @namespace_filter
+    @auth_required
+    def api_get_cronjob(namespace, cronjob_name):
+        """Get a specific cronjob."""
+        cronjob = get_cronjob(namespace, cronjob_name)
+        return cronjob
+    
+    @app.route("/api/namespaces/<namespace>/cronjobs/<cronjob_name>/yaml")
+    @namespace_filter
+    @auth_required
+    def api_get_cronjob_yaml(namespace, cronjob_name):
+        """Get cronjob as YAML string for editor."""
+        cronjob = get_cronjob(namespace, cronjob_name)
+        if not cronjob:
+            return {"error": "CronJob not found"}, 404
+        
+        # Strip immutable fields for editing
+        cronjob = _strip_immutable_fields(cronjob)
+        cronjob_yaml = yaml.dump(cronjob)
+        return {"yaml": cronjob_yaml}
+    
     # Add more legacy API routes as needed...
     # This is a minimal set to get tests working
     
@@ -269,4 +331,4 @@ def register_legacy_routes(app, auth):
 
 
 # Export functions that tests expect to import
-__all__ = ['_validate_cronjob_yaml', '_strip_immutable_fields', 'healthz']
+__all__ = ['_validate_cronjob_yaml', '_strip_immutable_fields', 'healthz', 'register_legacy_routes']
