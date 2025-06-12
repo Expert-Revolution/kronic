@@ -127,26 +127,6 @@ def login():
     )
     
     return response
->>>>>>> 22f6ca375acb4c17417804e9d535120fa848461c
-
-    log.info(f"Successful login for user: {email}")
-
-    return (
-        jsonify(
-            {
-                "message": "Login successful",
-                "token": tokens["access_token"],
-                "refresh_token": tokens["refresh_token"],
-                "expires_in": tokens["expires_in"],
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "is_verified": user.is_verified,
-                },
-            }
-        ),
-        200,
-    )
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -281,19 +261,6 @@ def refresh_token():
     )
     
     return response
->>>>>>> 22f6ca375acb4c17417804e9d535120fa848461c
-
-    return (
-        jsonify(
-            {
-                "message": "Token refreshed successfully",
-                "token": new_tokens["access_token"],
-                "refresh_token": new_tokens["refresh_token"],
-                "expires_in": new_tokens["expires_in"],
-            }
-        ),
-        200,
-    )
 
 
 @auth_bp.route("/logout", methods=["POST"])
