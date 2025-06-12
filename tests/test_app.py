@@ -506,7 +506,7 @@ def test_index_route_logic_namespace_only_false(mock_get_cronjobs):
         config.NAMESPACE_ONLY = original_namespace_only
 
 
-@patch("app.get_cronjob")
+@patch("app_routes.get_cronjob")
 def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
     """Test the new details route with an existing cronjob"""
     # Mock an existing cronjob
@@ -540,7 +540,7 @@ def test_view_cronjob_details_existing_cronjob(mock_get_cronjob):
         assert b"default" in response.data
 
 
-@patch("app.get_cronjob")
+@patch("app_routes.get_cronjob")
 def test_view_cronjob_details_nonexistent_cronjob(mock_get_cronjob):
     """Test the new details route with a non-existent cronjob"""
     # Mock no cronjob found

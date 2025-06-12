@@ -28,7 +28,7 @@ def test_react_login_ui():
         print("   ✅ Template loads correctly with React mount point")
     except Exception as e:
         print(f"   ❌ Template test failed: {e}")
-        return False
+        assert False, f"Test failed: {e}"
     
     # Test 2: Static files accessibility
     print("2. Testing static file serving...")
@@ -46,7 +46,7 @@ def test_react_login_ui():
         print("   ✅ React bundles are accessible and contain expected content")
     except Exception as e:
         print(f"   ❌ Static files test failed: {e}")
-        return False
+        assert False, f"Test failed: {e}"
     
     # Test 3: API endpoints
     print("3. Testing authentication API endpoints...")
@@ -66,7 +66,7 @@ def test_react_login_ui():
         print("   ✅ Authentication API endpoints are accessible")
     except Exception as e:
         print(f"   ❌ API endpoints test failed: {e}")
-        return False
+        assert False, f"Test failed: {e}"
     
     # Test 4: React Features
     print("4. Testing React component features...")
@@ -100,7 +100,7 @@ def test_react_login_ui():
         print("   ✅ React components and features are bundled correctly")
     except Exception as e:
         print(f"   ❌ React features test failed: {e}")
-        return False
+        assert False, f"Test failed: {e}"
     
     print("\n🎉 All tests passed! React Login UI is working correctly.")
     print("\nFeatures implemented:")
@@ -115,12 +115,15 @@ def test_react_login_ui():
     print("  • WCAG 2.1 accessibility compliance")
     print("  • Smooth animations and transitions")
     print("  • Integration with existing Flask auth API")
-    
-    return True
 
 if __name__ == "__main__":
     # Wait a moment for server to be ready
     time.sleep(1)
     
-    success = test_react_login_ui()
-    sys.exit(0 if success else 1)
+    try:
+        test_react_login_ui()
+        print("\n✅ All React UI tests passed!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n❌ React UI tests failed: {e}")
+        sys.exit(1)
