@@ -194,7 +194,7 @@ jobs:
 
             ### Installation
             ```bash
-            helm repo add kronic https://davides93.github.io/kronic/charts
+            helm repo add kronic https://expert-revolution.github.io/kronic/charts
             helm repo update
             helm install my-kronic kronic/kronic \
               --version ${{ needs.bump-version.outputs.new-version }}

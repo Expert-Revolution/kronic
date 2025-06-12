@@ -64,7 +64,7 @@ jobs:
 
       - name: Generate Helm repository index
         run: |
-          helm repo index docs/charts --url https://davides93.github.io/kronic/charts
+          helm repo index docs/charts --url https://expert-revolution.github.io/kronic/charts
           cp docs/charts/index.yaml docs/index.yaml
 
       - name: Update GitHub Pages with version information
