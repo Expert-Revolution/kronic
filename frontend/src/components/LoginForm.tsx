@@ -6,10 +6,9 @@ import { useTranslation } from '../hooks/useTranslation'
 
 interface LoginFormProps {
   onSuccess: () => void
-  onShowRegister: () => void
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowRegister }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const { t } = useTranslation()
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
@@ -177,16 +176,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowRegister }) => {
             onClick={() => {/* TODO: Implement forgot password */}}
           >
             {t('login.forgotPassword')}
-          </button>
-        </p>
-        <p className="footer-text">
-          {t('login.noAccount')}{' '}
-          <button
-            type="button"
-            className="btn-link"
-            onClick={onShowRegister}
-          >
-            {t('login.signUp')}
           </button>
         </p>
       </div>
