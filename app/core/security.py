@@ -216,6 +216,11 @@ def validate_csrf_token():
     if request.path.startswith("/api/") and request.headers.get("Authorization"):
         return True
 
+    # Skip CSRF validation for authentication endpoints that don't require authentication
+    auth_endpoints = ["/api/auth/login", "/api/auth/register", "/api/auth/refresh"]
+    if request.path in auth_endpoints:
+        return True
+
     token = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
     session_token = session.get("csrf_token")
 
