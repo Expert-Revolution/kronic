@@ -28,4 +28,4 @@ Thanks for using Kronic!
 Login with the username '{{ .Values.auth.adminUsername }}' and the password obtained from the command above.
 {{- end }}
 
-Submit issues or feedback at: https://github.com/davides93/kronic/issues
+Submit issues or feedback at: https://github.com/expert-revolution/kronic/issues
