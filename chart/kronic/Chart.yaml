@@ -8,7 +8,7 @@ home: https://github.com/expert-revolution/kronic
 maintainers:
   - name: davides93
     email: davides93@users.noreply.github.com
-    url: https://github.com/expert-revolution
+    url: https://github.com/expert-revolution/kronic
 annotations:
   artifacthub.io/category: monitoring-logging
   versioning: "automated"

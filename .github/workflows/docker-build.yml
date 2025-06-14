@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: expert-revolution/kronic
+  IMAGE_NAME: expert-revolution/kronic/kronic
 
 jobs:
   build-and-push:
