@@ -6,7 +6,25 @@ entries:
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:42:25.634785782Z"
+    created: "2025-06-14T08:13:22.852366622Z"
+    description: Kronic - The simple Kubernetes CronJob Admin UI
+    digest: 2c8a0d526a07da0beeecbb2486a70f4396892ac4f503f583e448827b387755a2
+    home: https://github.com/expert-revolution/kronic
+    maintainers:
+    - email: davides93@users.noreply.github.com
+      name: davides93
+      url: https://github.com/expert-revolution
+    name: kronic
+    type: application
+    urls:
+    - https://expert-revolution.github.io/kronic/charts/kronic-1.1.2.tgz
+    version: 1.1.2
+  - annotations:
+      artifacthub.io/category: monitoring-logging
+      versioning: automated
+    apiVersion: v2
+    appVersion: v0.1.4
+    created: "2025-06-14T08:13:22.851816883Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: a5004b738c6a82dbf6a69b4e2c7f7a06e6fe34dfea3260a0d8034864604a7911
     home: https://github.com/davides93/kronic
@@ -17,14 +35,14 @@ entries:
     name: kronic
     type: application
     urls:
-    - https://davides93.github.io/kronic/charts/kronic-1.1.1.tgz
+    - https://expert-revolution.github.io/kronic/charts/kronic-1.1.1.tgz
     version: 1.1.1
   - annotations:
       artifacthub.io/category: monitoring-logging
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:42:25.634211769Z"
+    created: "2025-06-14T08:13:22.851266944Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 97340e56075e77d197dbfe785fda54b963673367246f8e2a9067bb7105665c45
     home: https://github.com/davides93/kronic
@@ -35,14 +53,14 @@ entries:
     name: kronic
     type: application
     urls:
-    - https://davides93.github.io/kronic/charts/kronic-1.1.0.tgz
+    - https://expert-revolution.github.io/kronic/charts/kronic-1.1.0.tgz
     version: 1.1.0
   - annotations:
       artifacthub.io/category: monitoring-logging
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:42:25.633676728Z"
+    created: "2025-06-14T08:13:22.850727353Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 2fbd59606d1653490e6c4f00d751c5dc941701eeeb882938f4ace3048de8395c
     home: https://github.com/davides93/kronic
@@ -53,14 +71,14 @@ entries:
     name: kronic
     type: application
     urls:
-    - https://davides93.github.io/kronic/charts/kronic-1.0.3.tgz
+    - https://expert-revolution.github.io/kronic/charts/kronic-1.0.3.tgz
     version: 1.0.3
   - annotations:
       artifacthub.io/category: monitoring-logging
       versioning: automated
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:42:25.63313246Z"
+    created: "2025-06-14T08:13:22.850187463Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: 4ace907cc48cce65561d30c2471392b29eb2c1c2ddeeab0c29c525d53f553305
     home: https://github.com/davides93/kronic
@@ -71,13 +89,13 @@ entries:
     name: kronic
     type: application
     urls:
-    - https://davides93.github.io/kronic/charts/kronic-0.1.8.tgz
+    - https://expert-revolution.github.io/kronic/charts/kronic-0.1.8.tgz
     version: 0.1.8
   - annotations:
       artifacthub.io/category: monitoring-logging
     apiVersion: v2
     appVersion: v0.1.4
-    created: "2025-06-09T20:42:25.632571631Z"
+    created: "2025-06-14T08:13:22.849620772Z"
     description: Kronic - The simple Kubernetes CronJob Admin UI
     digest: ac9ad0afe1f06fa8dc470c7df5ff9fe8c1b36f3087c1782db9e6c274ed4da4ed
     home: https://github.com/davides93/kronic
@@ -88,6 +106,6 @@ entries:
     name: kronic
     type: application
     urls:
-    - https://davides93.github.io/kronic/charts/kronic-0.1.7.tgz
+    - https://expert-revolution.github.io/kronic/charts/kronic-0.1.7.tgz
     version: 0.1.7
-generated: "2025-06-09T20:42:25.631869127Z"
+generated: "2025-06-14T08:13:22.84888277Z"
