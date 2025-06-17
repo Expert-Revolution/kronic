@@ -384,7 +384,11 @@ def rate_limit_status():
     """Get current rate limiting status."""
     rate_limiter = get_rate_limiter()
     if not rate_limiter:
-        return jsonify({"enabled": False, "message": "Rate limiting not available"}), 200
+        return (
+            jsonify({"enabled": False, "message": "Rate limiting not available"}),
+            200,
+        )
+
     
     try:
         status = rate_limiter.get_rate_limit_status()

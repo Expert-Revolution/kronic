@@ -189,12 +189,12 @@ class TestRateLimiting(unittest.TestCase):
         from rate_limiting import RateLimitManager
         
         manager = RateLimitManager()
-        
+
         # Test with invalid limit format
-        with patch.object(manager, 'redis_client', None):
+        with patch.object(manager, "redis_client", None):
             remaining = manager._get_remaining_requests("test_key", "invalid_format")
             self.assertIsNone(remaining)
-            
+
             reset_time = manager._get_reset_time("invalid_format")
             self.assertIsNone(reset_time)
 

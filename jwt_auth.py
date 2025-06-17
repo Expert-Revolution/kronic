@@ -59,7 +59,9 @@ def init_limiter(app: Flask):
         try:
             # Import and initialize the enhanced rate limiting system
             from rate_limiting import init_rate_limiter
+
             rate_limiter = init_rate_limiter(app, redis_client)
+
             
             # Keep the old limiter for backward compatibility
             storage_uri = REDIS_URL if redis_client else None
