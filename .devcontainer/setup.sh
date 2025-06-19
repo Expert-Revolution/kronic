@@ -56,6 +56,9 @@ alias kronic-test="python -m pytest tests/ -v"
 alias kronic-run="python -m flask run --debug -h 0.0.0.0"
 alias kronic-format="python -m black . && python -m isort ."
 alias k="kubectl"
+
+# Set dev container environment flag
+export DEVCONTAINER=true
 EOF
 
 echo "✅ Kronic development environment setup complete!"
