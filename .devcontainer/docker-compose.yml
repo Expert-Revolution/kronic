@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker-host.sock
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://kronic:kronicpass@postgres:5432/kronic
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/workspace
+    depends_on:
+      - postgres
+      - redis
+    command: sleep infinity
+    networks:
+      - kronic-dev
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kronic
+      POSTGRES_PASSWORD: kronicpass
+      POSTGRES_DB: kronic
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - kronic-dev
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - kronic-dev
+
+volumes:
+  postgres-data:
+
+networks:
+  kronic-dev:
+    driver: bridge
