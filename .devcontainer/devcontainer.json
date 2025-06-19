@@ -78,20 +78,20 @@
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally
   "forwardPorts": [
-    5000,  // Flask app
-    3000   // React dev server
+    // 5000,  // Flask app
+    // 3000   // React dev server
   ],
 
   // Set port attributes
   "portsAttributes": {
-    "5000": {
-      "label": "Flask App",
-      "onAutoForward": "notify"
-    },
-    "3000": {
-      "label": "React Dev Server",
-      "onAutoForward": "notify"
-    }
+    // "5000": {
+    //   "label": "Flask App",
+    //   "onAutoForward": "notify"
+    // },
+    // "3000": {
+    //   "label": "React Dev Server",
+    //   "onAutoForward": "notify"
+    // }
   },
 
   // Use 'postCreateCommand' to run commands after the container is created
