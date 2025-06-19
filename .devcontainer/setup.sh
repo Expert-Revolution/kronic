@@ -3,6 +3,10 @@
 # Setup script for Kronic development environment
 echo "🚀 Setting up Kronic development environment..."
 
+# Install k3d for local Kubernetes development
+echo "📦 Installing k3d..."
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
 # Change to workspace directory
 cd /workspace
 
