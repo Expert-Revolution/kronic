@@ -79,9 +79,7 @@
   // Use 'forwardPorts' to make a list of ports inside the container available locally
   "forwardPorts": [
     5000,  // Flask app
-    3000,  // React dev server
-    5432,  // PostgreSQL
-    6379   // Redis
+    3000   // React dev server
   ],
 
   // Set port attributes
@@ -93,14 +91,6 @@
     "3000": {
       "label": "React Dev Server",
       "onAutoForward": "notify"
-    },
-    "5432": {
-      "label": "PostgreSQL",
-      "onAutoForward": "silent"
-    },
-    "6379": {
-      "label": "Redis",
-      "onAutoForward": "silent"
     }
   },
 
