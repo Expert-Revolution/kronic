@@ -27,15 +27,12 @@
       "extensions": [
         // Python extensions
         "ms-python.python",
-        "ms-python.flake8",
         "ms-python.black-formatter",
         "ms-python.isort",
-        "ms-python.pylint",
         
         // JavaScript/TypeScript extensions
         "ms-vscode.vscode-typescript-next",
         "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss",
         
         // DevOps and Kubernetes
         "ms-kubernetes-tools.vscode-kubernetes-tools",
@@ -44,21 +41,13 @@
         
         // General development
         "ms-vscode.vscode-json",
-        "formulahendry.auto-rename-tag",
         "christian-kohler.path-intellisense",
-        "ms-vscode.test-adapter-converter",
         
         // Git and GitHub
-        "github.vscode-github-actions",
-        "github.copilot",
-        "github.copilot-chat"
+        "github.vscode-github-actions"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.formatting.provider": "black",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true,
-        "python.linting.flake8Enabled": true,
         "python.testing.pytestEnabled": true,
         "python.testing.unittestEnabled": false,
         "python.testing.pytestArgs": [
