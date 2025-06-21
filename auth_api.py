@@ -389,7 +389,6 @@ def rate_limit_status():
             200,
         )
 
-    
     try:
         status = rate_limiter.get_rate_limit_status()
         return jsonify(status), 200
