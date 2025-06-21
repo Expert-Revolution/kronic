@@ -30,12 +30,11 @@ services:
       - full
 
   kronic:
-    build:
-      context: .
-      target: dev
+    image: kronic-dev:latest
     environment:
       KRONIC_ALLOW_NAMESPACES: ""
       KRONIC_ADMIN_PASSWORD: "admin123!"
+      # Use k3d cluster kubeconfig from named volume
       KUBECONFIG: "/home/kronic/.kube/config"
       # Database configuration
       KRONIC_DATABASE_HOST: postgres
@@ -56,21 +55,27 @@ services:
       FLASK_DEBUG: true
       FLASK_ENV: development
     volumes:
-      - .:/app
-      # Mount mock kubeconfig for testing
-      - /tmp/mock-kube:/home/kronic/.kube
+      # Mount Docker socket for k3d cluster communication
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Create a named volume for kubeconfig sharing
+      - kubeconfig_data:/home/kronic/.kube
+      # Mount temp directory for configurations
+      - /tmp:/tmp
     ports:
       - 5001:5000
     depends_on:
       postgres:
         condition: service_healthy
-    # networks:
-    #   - k3d-kronic-localdev
+    networks:
+      - default
+      - k3d-kronic-localdev
 
 volumes:
   postgres_data:
   redis_data:
+  kubeconfig_data:
 
-# networks:
-#   k3d-kronic-localdev:
-#     external: true
+networks:
+  k3d-kronic-localdev:
+    external: true
+    name: k3d-kronic-localdev

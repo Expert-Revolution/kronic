@@ -68,19 +68,45 @@ check_requirements() {
         return 1
     fi
     
+    # Check if we're in a dev container
+    if [ -f /.dockerenv ] && [ "${DEVCONTAINER:-}" = "true" ]; then
+        log_warn "Running in dev container - using Docker-in-Docker mode"
+        
+        # Check Docker socket access
+        if ! docker info >/dev/null 2>&1; then
+            log_error "Cannot access Docker daemon in dev container"
+            log_error "Make sure Docker socket is mounted: -v /var/run/docker.sock:/var/run/docker.sock"
+            return 1
+        fi
+    fi
+    
     return 0
 }
 
 start_cluster() {
     log_info "Starting k3d cluster..."
     cd "$PROJECT_DIR"
-    python scripts/localdev.py start --cluster-name "$CLUSTER_NAME"
+    
+    # Check if we're in a dev container
+    if [ -f /.dockerenv ] && [ "${DEVCONTAINER:-}" = "true" ]; then
+        log_info "Using dev container specific k3d setup..."
+        "$SCRIPT_DIR/dev-container-setup.sh" setup
+    else
+        python scripts/localdev.py start --cluster-name "$CLUSTER_NAME"
+    fi
 }
 
 stop_cluster() {
     log_info "Stopping k3d cluster..."
     cd "$PROJECT_DIR"
-    python scripts/localdev.py stop --cluster-name "$CLUSTER_NAME"
+    
+    # Check if we're in a dev container
+    if [ -f /.dockerenv ] && [ "${DEVCONTAINER:-}" = "true" ]; then
+        log_info "Using dev container specific k3d cleanup..."
+        "$SCRIPT_DIR/dev-container-setup.sh" cleanup
+    else
+        python scripts/localdev.py stop --cluster-name "$CLUSTER_NAME"
+    fi
 }
 
 # Helper function to run docker compose
