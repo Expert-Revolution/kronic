@@ -24,8 +24,14 @@ import config
 # Set TEST flag to prevent loading real kube config in modules
 config.TEST = True
 
-from kron import (delete_cronjob, get_cronjob, get_cronjobs,
-                  toggle_cronjob_suspend, trigger_cronjob, update_cronjob)
+from kron import (
+    delete_cronjob,
+    get_cronjob,
+    get_cronjobs,
+    toggle_cronjob_suspend,
+    trigger_cronjob,
+    update_cronjob,
+)
 
 
 class KindClusterManager:
@@ -85,25 +91,31 @@ nodes:
                         "--verbosity",
                         "1",
                     ]
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=180
+                    )
                     if result.returncode == 0:
                         break
-                    
+
                     if attempt < max_retries - 1:
                         print(f"Attempt {attempt + 1} failed, retrying...")
                         # Clean up before retry
                         subprocess.run(cleanup_cmd, capture_output=True, timeout=30)
                         time.sleep(5)
                     else:
-                        raise RuntimeError(f"Failed to create kind cluster after {max_retries} attempts: {result.stderr}")
-                        
+                        raise RuntimeError(
+                            f"Failed to create kind cluster after {max_retries} attempts: {result.stderr}"
+                        )
+
                 except subprocess.TimeoutExpired:
                     if attempt < max_retries - 1:
                         print(f"Attempt {attempt + 1} timed out, retrying...")
                         subprocess.run(cleanup_cmd, capture_output=True, timeout=30)
                         time.sleep(5)
                     else:
-                        raise RuntimeError(f"Kind cluster creation timed out after {max_retries} attempts")
+                        raise RuntimeError(
+                            f"Kind cluster creation timed out after {max_retries} attempts"
+                        )
 
             # Export kubeconfig
             cmd = [
@@ -165,7 +177,7 @@ nodes:
         start_time = time.time()
         ready_checks = 0
         required_ready_checks = 3  # Require 3 consecutive successful checks
-        
+
         print("Waiting for cluster to be ready...")
         while time.time() - start_time < timeout:
             try:
@@ -177,36 +189,49 @@ nodes:
                     timeout=10,
                 )
                 if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')
-                    if lines and all('Ready' in line for line in lines if line.strip()):
+                    lines = result.stdout.strip().split("\n")
+                    if lines and all("Ready" in line for line in lines if line.strip()):
                         ready_checks += 1
-                        print(f"Cluster check {ready_checks}/{required_ready_checks} passed")
-                        
+                        print(
+                            f"Cluster check {ready_checks}/{required_ready_checks} passed"
+                        )
+
                         if ready_checks >= required_ready_checks:
                             # Additional check: ensure core components are running
                             result = subprocess.run(
-                                ["kubectl", "get", "pods", "-n", "kube-system", "--no-headers"],
+                                [
+                                    "kubectl",
+                                    "get",
+                                    "pods",
+                                    "-n",
+                                    "kube-system",
+                                    "--no-headers",
+                                ],
                                 capture_output=True,
                                 text=True,
                                 timeout=10,
                             )
                             if result.returncode == 0:
-                                pod_lines = result.stdout.strip().split('\n')
-                                running_pods = [line for line in pod_lines if 'Running' in line]
-                                if len(running_pods) >= 4:  # Expect at least 4 core system pods
+                                pod_lines = result.stdout.strip().split("\n")
+                                running_pods = [
+                                    line for line in pod_lines if "Running" in line
+                                ]
+                                if (
+                                    len(running_pods) >= 4
+                                ):  # Expect at least 4 core system pods
                                     print("Cluster is ready!")
                                     return True
                     else:
                         ready_checks = 0  # Reset counter if check fails
                 else:
                     ready_checks = 0
-                    
+
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
                 ready_checks = 0
                 print(f"Cluster readiness check failed: {e}")
-                
+
             time.sleep(3)
-            
+
         raise RuntimeError(f"Cluster failed to become ready within {timeout} seconds")
 
 
@@ -247,23 +272,37 @@ def kind_cluster():
     """Session-scoped fixture that provides a kind cluster for integration tests."""
     # Check if we're in a problematic Docker-in-Docker environment
     if os.environ.get("DEVCONTAINER", "").lower() == "true":
-        pytest.skip("Integration tests with kind clusters are not reliable in dev containers")
-    
+        pytest.skip(
+            "Integration tests with kind clusters are not reliable in dev containers"
+        )
+
     # Check if integration requirements are available
     missing_tools = []
     try:
-        subprocess.run(["kind", "--version"], capture_output=True, timeout=5, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        subprocess.run(
+            ["kind", "--version"], capture_output=True, timeout=5, check=True
+        )
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         missing_tools.append("kind")
-    
+
     try:
         subprocess.run(["docker", "info"], capture_output=True, timeout=10, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         missing_tools.append("docker")
-    
+
     if missing_tools:
-        pytest.skip(f"Missing required tools for integration tests: {', '.join(missing_tools)}")
-    
+        pytest.skip(
+            f"Missing required tools for integration tests: {', '.join(missing_tools)}"
+        )
+
     manager = KindClusterManager()
     try:
         manager.create_cluster()
@@ -271,7 +310,9 @@ def kind_cluster():
     except Exception as e:
         # Log the error but don't fail the test session
         print(f"Warning: Failed to create kind cluster for integration tests: {e}")
-        pytest.skip("Failed to create kind cluster - possibly due to Docker-in-Docker limitations")
+        pytest.skip(
+            "Failed to create kind cluster - possibly due to Docker-in-Docker limitations"
+        )
     finally:
         try:
             manager.cleanup()
