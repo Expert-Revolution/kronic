@@ -28,7 +28,7 @@ services:
       - full
 
   kronic:
-    image: davides1993/kronic:latest
+    image: ghcr.io/expert-revolution/kronic/kronic:latest
     environment:
       KRONIC_ALLOW_NAMESPACES: ""
       KRONIC_ADMIN_PASSWORD: "admin123!"
