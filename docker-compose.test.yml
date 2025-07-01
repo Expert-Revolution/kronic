@@ -50,9 +50,14 @@ services:
         condition: service_healthy
       redis-test:
         condition: service_healthy
-    command: python -m pytest tests/ -v
-    profiles:
-      - test
+    command: >
+      bash -c "
+      /app/scripts/wait-for-db.sh postgres-test 5432 kronic_test kronic_test kronic_test123 &&
+      flask db upgrade &&
+      python -m pytest tests/ -v
+      "
+    # profiles:
+    #   - test
 
 volumes:
   postgres_test_data:

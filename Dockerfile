@@ -11,8 +11,9 @@ RUN pip install -r requirements.txt
 
 FROM deps as dev
 COPY requirements-dev.txt /app/
+COPY scripts /app/scripts
 RUN pip install -r requirements-dev.txt
-RUN apk add --no-cache git openssh-client-default curl bash
+RUN apk add --no-cache git openssh-client-default curl bash postgresql-client
 # Install Helm for chart testing
 RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
     && chmod 700 get_helm.sh \
