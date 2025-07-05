@@ -1,17 +1,147 @@
-# COPILOT EDITS OPERATIONAL GUIDELINES
 
-## PRIME DIRECTIVE
+# COPILOT INSTRUCTIONS FOR KRONIC
 
-    Avoid working on more than one file at a time.
-    Multiple simultaneous edits to a file will cause corruption.
-    Be chatting and teach about what you are doing while coding.
+## PROJECT OVERVIEW
 
-## LARGE FILE & COMPLEX CHANGE PROTOCOL
+Kronic is a web-based Kubernetes CronJob management UI built with Flask, AlpineJS, and PicoCSS. It provides a simple interface for viewing, editing, triggering, and managing CronJobs across Kubernetes clusters.
+
+**Key Architecture:**
+- **Backend**: Flask app (`app.py`, `app/main.py`) with Kubernetes client integration (`kron.py`)
+- **Authentication**: Multi-layered (JWT, Basic Auth, PostgreSQL users) in `auth_api.py`, `jwt_auth.py`
+- **Frontend**: Server-rendered templates with AlpineJS + modern React components in `frontend/`
+- **Deployment**: Docker containers, Helm charts, k3d for local development
+
+## DEVELOPMENT WORKFLOW
+
+### Local Development Setup
+```bash
+# Quick start with automated k3d cluster
+./scripts/dev.sh up          # Starts k3d + postgres + kronic
+./scripts/dev.sh logs        # View application logs  
+./scripts/dev.sh down        # Clean shutdown
+
+# Manual development against existing cluster
+docker-compose up postgres   # Start database only
+python app.py               # Run Flask directly (port 5000)
+```
+
+### Testing Strategy
+```bash
+# Unit tests (fast, no dependencies)
+pytest tests/ -m "not integration"
+
+# Integration tests (uses ephemeral kind clusters)  
+pytest tests/ -m "integration"
+
+# Test coverage
+pytest --cov=. tests/
+```
+
+## PROJECT-SPECIFIC PATTERNS
+
+### Kubernetes Integration (`kron.py`)
+- **Client Setup**: Auto-detects in-cluster vs kubeconfig authentication
+- **Core Functions**: `get_cronjobs()`, `get_cronjob()`, `trigger_cronjob()`, `toggle_cronjob_suspend()`
+- **Namespace Filtering**: Decorator-based access control via `config.ALLOW_NAMESPACES`
+- **Error Handling**: Returns `{"error": code, "exception": details}` on failures
+
+### Authentication Architecture
+- **Multi-tier**: JWT cookies → Database users → Environment variables (fallback)
+- **Database Mode**: PostgreSQL with Alembic migrations (`alembic upgrade head`)
+- **Namespace Security**: `@namespace_filter` decorator enforces access controls
+- **Session Management**: `verify_password()` in `app.py` handles all auth methods
+
+### Configuration Patterns (`config.py`)
+- **Environment Variables**: `KRONIC_*` prefix for all settings
+- **Database Toggle**: `DATABASE_ENABLED` flag switches auth modes
+- **Namespace Modes**: `ALLOW_NAMESPACES` (list) vs `NAMESPACE_ONLY` (single)
+- **Test Mode**: `KRONIC_TEST=true` disables Kubernetes client initialization
+
+### Route Organization
+- **Legacy Routes**: `app.py` (being migrated to `app/main.py`)
+- **API Endpoints**: `/api/namespaces/<ns>/cronjobs/<name>` pattern
+- **Template Routes**: Server-rendered HTML with YAML editing capabilities
+- **YAML Validation**: `_validate_cronjob_yaml()` with syntax + semantic checks
+
+## DEPLOYMENT & INFRASTRUCTURE
+
+### Helm Chart (`chart/kronic/`)
+- **Versioning**: Semantic versioning with `./scripts/bump-chart-version.sh`
+- **Authentication**: Built-in basic auth with random password generation
+- **Network Policy**: Optional ingress controls via `networkPolicy.enabled`
+- **Database Support**: PostgreSQL backend configuration
+
+### Development Scripts
+- **`scripts/dev.sh`**: Complete local environment with k3d cluster
+- **`scripts/run-tests.sh`**: Standardized test execution 
+- **`scripts/seed_database.py`**: Initialize users and roles
+
+---
+
+## OPERATIONAL GUIDELINES & PRIME DIRECTIVE
+
+**Avoid working on more than one file at a time.** Multiple simultaneous edits to a file will cause corruption.
+**Be chatting and teach about what you are doing while coding.**
+
+### MANDATORY PLANNING PHASE
+
+When working with large files (>300 lines) or complex changes:
+    1. ALWAYS start by creating a detailed plan BEFORE making any edits
+    2. Your plan MUST include:
+           - All functions/sections that need modification
+           - The order in which changes should be applied
+           - Dependencies between changes
+           - Estimated number of separate edits required
+
+    3. Format your plan as:
+
+## PROPOSED EDIT PLAN
+
+    Working with: [filename]
+    Total planned edits: [number]
+
+### MAKING EDITS
+
+    - Focus on one conceptual change at a time
+    - Show clear "before" and "after" snippets when proposing changes
+    - Include concise explanations of what changed and why
+    - Always check if the edit maintains the project's coding style
+
+### Edit sequence:
+
+    1. [First specific change] - Purpose: [why]
+    2. [Second specific change] - Purpose: [why]
+    3. Do you approve this plan? I'll proceed with Edit [number] after your confirmation.
+    4. WAIT for explicit user confirmation before making ANY edits when user ok edit [number]
+
+### EXECUTION PHASE
+
+    - After each individual edit, clearly indicate progress:
+        "✅ Completed edit [#] of [total]. Ready for next edit?"
+    - If you discover additional needed changes during editing:
+    - STOP and update the plan
+    - Get approval before continuing
+
+### REFACTORING GUIDANCE
+
+    When refactoring large files:
+    - Break work into logical, independently functional chunks
+    - Ensure each intermediate state maintains functionality
+    - Consider temporary duplication as a valid interim step
+    - Always indicate the refactoring pattern being applied
+
+### RATE LIMIT AVOIDANCE
+
+    - For very large files, suggest splitting changes across multiple sessions
+    - Prioritize changes that are logically complete units
+    - Always provide clear stopping points
+
+---
 
 ### MANDATORY PLANNING PHASE
 
     When working with large files (>300 lines) or complex changes:
-    	1. ALWAYS start by creating a detailed plan BEFORE making any edits
+        1. ALWAYS start by creating a detailed plan BEFORE making any edits
             2. Your plan MUST include:
                    - All functions/sections that need modification
                    - The order in which changes should be applied
@@ -42,7 +172,7 @@
 ### EXECUTION PHASE
 
     - After each individual edit, clearly indicate progress:
-    	"✅ Completed edit [#] of [total]. Ready for next edit?"
+        "✅ Completed edit [#] of [total]. Ready for next edit?"
     - If you discover additional needed changes during editing:
     - STOP and update the plan
     - Get approval before continuing
