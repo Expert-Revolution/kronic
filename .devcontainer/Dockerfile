@@ -10,7 +10,12 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         wget \
         vim \
         git \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove -y && apt-get clean -y
+
+RUN npm install -g @google/gemini-cli
 
 # Install kubectl, helm, and kind
 RUN ARCH=$(dpkg --print-architecture) \

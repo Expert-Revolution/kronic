@@ -44,7 +44,10 @@
         "christian-kohler.path-intellisense",
         
         // Git and GitHub
-        "github.vscode-github-actions"
+        "github.vscode-github-actions",
+        "amazonwebservices.amazon-q-vscode",
+        "googlecloudtools.cloudcode",
+        "google.generative-ai-studio"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
